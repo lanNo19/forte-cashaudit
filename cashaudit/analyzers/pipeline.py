@@ -164,7 +164,11 @@ class PipelineAnalyzer:
                         v.source = "vlm"  # came from VLM-reported events: held to the VLM floor in fusion
                         candidates.append(v)
                 meta["n_vlm_events"] = len(vlm_events)
+                if os.getenv("DEBUG_EVENTS"):
+                    meta["vlm_events"] = [{k: (lambda x: x if isinstance(x, (int, float, type(None))) else str(x))(getattr(e, k, None)) for k in ("t", "kind", "actor", "obj", "zone", "conf")} for e in merged.events]
             meta["n_windows"] = len(windows)
+            if os.getenv("DEBUG_EVENTS"):
+                meta["candidates"] = [{k: (lambda x: x if isinstance(x, (int, float, type(None))) else str(x))(getattr(v, k, None)) for k in ("type_id", "timecode_sec", "confidence", "conf", "source")} for v in candidates]
         meta["stages"]["vlm_scan"] = round(time.time() - t0, 2)
 
         # Fusion + VLM verification of each surviving candidate (may veto visible types, see fusion.py)
