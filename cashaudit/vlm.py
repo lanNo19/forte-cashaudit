@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 from typing import List, Optional, Sequence, Tuple
@@ -259,6 +261,8 @@ class VLMClient:
         t = kb.load_kb()["by_id"].get(v.type_id)
         rule = f"{t['name']}. Visual cue: {t['cue']}" if t else v.type
         when = v.timecode_sec - frames[0][0] if self.input_mode == "video" else v.timecode_sec
+        if os.getenv("VERIFY_MODE", "logprob") == "logprob":
+            return self._verify_logprob(frames, v, rule, when)
         prompt = (
             f"{self._time_hint(frames)}\nRule: {rule}\nClaim: around t={when:.1f}s this rule is broken.\n"
             'Answer JSON only: {"holds": true|false, "confidence": 0.0, "observed": "one sentence in Russian"}'
@@ -271,3 +275,31 @@ class VLMClient:
             return None
         conf = float(data.get("confidence", 0.5))
         return conf if data.get("holds") else min(conf, 1 - conf) * 0.5
+
+    def _verify_logprob(self, frames: Frames, v: Violation, rule: str, when: float) -> Optional[float]:
+        """VERIFY_MODE=logprob: one-word yes/no answer; returns P(yes) from the token probabilities instead of the
+        model's self-reported confidence (unreliable on small VLMs: 0.9-0.98 for real and false candidates alike)."""
+        prompt = (
+            f"{self._time_hint(frames)}\nRule: {rule}\n"
+            f"Look at what happens around t={when:.1f}s. Is this rule actually broken there?\n"
+            "Answer with exactly one word: yes or no."
+        )
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": SYSTEM},
+                         {"role": "user", "content": self._media(frames) + [{"type": "text", "text": prompt}]}],
+            "temperature": 0.0, "max_tokens": 1, "logprobs": True, "top_logprobs": 10,
+        }
+        try:
+            r = self.http.post(f"{self.base_url}/chat/completions", json=body)
+            r.raise_for_status()
+            top = r.json()["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
+            yes = sum(math.exp(x["logprob"]) for x in top if x["token"].strip().lower() in ("yes", "да"))
+            no = sum(math.exp(x["logprob"]) for x in top if x["token"].strip().lower() in ("no", "нет"))
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
+            return None
+        if yes + no <= 0:
+            return None
+        p = yes / (yes + no)
+        print(f"VERIFY {v.type_id} t={v.timecode_sec:.1f} p_yes={p:.3f}", file=sys.stderr, flush=True)
+        return p

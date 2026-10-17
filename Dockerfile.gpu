@@ -32,6 +32,9 @@ RUN python3 -c "import importlib.util as u, sys; sys.exit(0 if u.find_spec('rfde
  && python3 -c "import rfdetr; getattr(rfdetr, {'nano':'RFDETRNano','small':'RFDETRSmall','medium':'RFDETRMedium','base':'RFDETRBase','large':'RFDETRLarge'}['${CV_DETECTOR}'])(device='cpu'); print('RF-DETR ${CV_DETECTOR} weights cached')" \
  || echo "no detector weights baked in (rfdetr not installed, or the download failed)"
 
+# the vLLM image only has python3; some team commands say `python`
+RUN command -v python >/dev/null 2>&1 || ln -s "$(command -v python3)" /usr/local/bin/python
+
 COPY cashaudit cashaudit
 COPY data data
 COPY tools tools

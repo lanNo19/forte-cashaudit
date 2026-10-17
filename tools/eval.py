@@ -171,7 +171,8 @@ def run_api(base, key, items, out, parallel=1, timeout=330.0):
             timing[name] = round(dt, 2)
             (out / f"{name}.json").write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
             late = "  OVER 300 s" if dt > 300 else ""
-            print(f"  {name:12s} {body.get('status', '?'):8s} {body.get('verdict', ''):13s} {dt:6.1f}s{late}", flush=True)
+            err = f"  {str(body.get('error'))[:100]}" if body.get("status") != "done" and body.get("error") else ""
+            print(f"  {name:12s} {body.get('status', '?'):8s} {body.get('verdict', ''):13s} {dt:6.1f}s{late}{err}", flush=True)
     prev = {}
     tp = out / "_timing.json"
     if tp.exists():
@@ -279,6 +280,7 @@ def main():
     ap.add_argument("--out", help="where to write predictions (default: --preds)")
     ap.add_argument("--clips", help="comma-separated subset, e.g. X-1,X-2,X-13")
     ap.add_argument("--no-dupes", action="store_true", help="drop X-47/X-48 (copies of X-4/X-5)")
+    ap.add_argument("--labels", help="annotations CSV (default data/train_annotations.csv), e.g. our own clips")
     ap.add_argument("--parallel", type=int, default=1, help="concurrent uploads in --api mode")
     args = ap.parse_args()
 
@@ -295,7 +297,7 @@ def main():
             print(f"  {Path(f).stem}: {'schema OK' if not errs else '; '.join(errs[:3])}")
         return
 
-    rows = load_annotations()
+    rows = load_annotations(Path(args.labels)) if args.labels else load_annotations()
     if args.clips:
         keep = set(args.clips.split(","))
         rows = [r for r in rows if r["clip"] in keep]

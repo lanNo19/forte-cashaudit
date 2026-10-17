@@ -1,8 +1,9 @@
 # HTTPS in front of the API (compose profile "https"). DOMAIN comes from .env; its A record must point at the VM.
 # Caddy gets and renews a Let's Encrypt certificate by itself; ports 80 and 443 must be open in the GCP firewall.
+# max_size must stay above MAX_UPLOAD_MB (300) or big uploads get a bare 413 from Caddy instead of the API's answer
 {$DOMAIN} {
 	request_body {
-		max_size 200MB
+		max_size 310MB
 	}
 	reverse_proxy api:8000
 }
