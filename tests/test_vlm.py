@@ -101,3 +101,11 @@ def test_scene_question_and_filter():
     assert scene_type_ids(None) is None
     unsure = fake_client(lambda req: reply('{"scene": "A", "confidence": 0.4}'))
     assert unsure.classify_scene(frames()) is None
+
+
+def test_scan_prompt_has_no_concrete_example_values():
+    # Qwen3-VL-4B copied the old example ("T09", t 7.0) into its answers on 17 Oct: keep the schema abstract.
+    import inspect
+    from cashaudit import vlm
+    src = inspect.getsource(vlm.VLMClient.scan_window)
+    assert '"T09"' not in src and '"t": 7' not in src
