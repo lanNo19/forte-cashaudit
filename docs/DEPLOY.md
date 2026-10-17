@@ -37,7 +37,7 @@ why session 4 starts at 07:30 and why session 3 ends with a machine image (see "
 On your laptop (Cloud Shell works too):
 
 ```bash
-VM=<a100-instance-name>; ZONE=<its zone, e.g. us-central1-a>; REGION=${ZONE%-*}
+VM=test-vm-a100; ZONE=us-central1-f; REGION=us-central1   # static IP 34.171.142.215 (cashaudit-ip)
 gcloud compute instances describe $VM --zone $ZONE --format="table(machineType.basename(),scheduling.provisioningModel,disks[0].diskSizeGb,networkInterfaces[0].accessConfigs[0].natIP)"
 ```
 
@@ -74,26 +74,19 @@ nvidia-smi --query-compute-apps=pid,used_memory,name --format=csv
 lsblk; sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1; df -h /
 ```
 
-**3. Driver, Docker, NVIDIA container toolkit** (skip what is already there):
+**3. Docker from static binaries (not apt).** Our VM (Deep Learning VM, Ubuntu 24.04, driver 580, toolkit
+preinstalled) has a half-finished kernel 7.0 upgrade in apt. **Never run `apt --fix-broken install` or `apt upgrade`
+before the jury is done**: it would make the next boot use kernel 7.0, which the NVIDIA driver may not support (no
+GPU). Docker therefore comes from Docker's release files. Run each line separately:
 
 ```bash
-nvidia-smi || {
-  curl -L https://storage.googleapis.com/compute-gpu-installation-us/installer/latest/cuda_installer.pyz -o cuda_installer.pyz
-  sudo python3 cuda_installer.pyz install_driver   # may reboot; run it again after the reboot if it asks
-}
-docker compose version || { curl -fsSL https://get.docker.com | sudo sh; sudo usermod -aG docker $USER; }
-sudo systemctl enable --now docker
-dpkg -l nvidia-container-toolkit >/dev/null 2>&1 || {
-  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-  curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
-    | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
-    | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-  sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-  sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-}
-exit   # log out and back in (gcloud compute ssh ...) so the docker group applies, then:
-docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi   # must list the A100
+curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.3.1.tgz | sudo tar xz -C /usr/local/bin --strip-components=1
+sudo mkdir -p /usr/local/lib/docker/cli-plugins && sudo curl -fsSL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose && sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+printf '[Unit]\nDescription=Docker (static binaries)\nAfter=network-online.target\nWants=network-online.target\n[Service]\nExecStart=/usr/local/bin/dockerd\nRestart=always\nLimitNOFILE=1048576\nDelegate=yes\nKillMode=process\n[Install]\nWantedBy=multi-user.target\n' | sudo tee /etc/systemd/system/docker.service >/dev/null
+sudo nvidia-ctk runtime configure --runtime=docker && sudo groupadd -f docker && sudo usermod -aG docker $USER && sudo systemctl daemon-reload && sudo systemctl enable --now docker
+sudo docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi --query-gpu=name --format=csv   # A100
 ```
+Log out and back in so `docker` works without sudo. Done on `test-vm-a100` 17 Oct 16:36.
 
 **4. Code, key, clips.** The repo is private: add the VM's public key as a read-only deploy key (GitHub > repo >
 Settings > Deploy keys), or paste it to Claude to add.
