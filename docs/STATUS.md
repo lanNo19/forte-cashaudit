@@ -30,6 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 22:50 · Ablay + Claude · combo1 (main + cv/states, logprob verify): `BOARD Video acc 30/42 · Missed 9/22 · False alarms 3/20 · Median |dt| 3.9 s · Type acc 7/13`; maxv1 (MAX_VIOLATIONS=1) same detection, |dt| 5.0 s. `tools/run_report.py <run> [--wrong]`: per clip label/VLM/CV scene, final violations with source and confidence, debug candidates split by likely path. Found: the pipeline keeps the VLM's scene for the scan's rule cards and the merged-log rules even when the CV scene guess overrules it (X-35..39).
 - 2026-10-17 21:55 · Claude · UI type scale up for demos (body 17 px, finding title 21, legal points 19, timecode 24, verdict 38); timeline marks closer than 5% stack in lanes so their numbers never overlap.
 - 2026-10-17 21:45 · Claude · UI: results were drawn twice when two status polls returned `done` together (seen on X-30; reproduced with a 2 s server: 6 cards instead of 3); now one poll at a time with a 10 s timeout, render once. Legal basis block: amber, act name first with its points under it, points 16 px, "по аналогии" badge.
 - 2026-10-17 21:25 · Ablay + Claude · VM on main (logprob verify default, Amina's CV fixes, new UI): load test 5× X-14 slowest 157 s (was 177 s), all 5 answer no_violation (the T19 flip is gone), schema OK. cv8b: CV-only 22/42, FA 0/20 on originals and shifted; with VLM (json verify) 26/42, missed 5/22, FA 11/20 (was 13/20).
