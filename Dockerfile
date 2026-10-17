@@ -1,5 +1,4 @@
-# Service image. When the pipeline needs torch/CUDA, switch the base to a CUDA runtime image
-# (e.g. pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime) and add requirements-gpu.txt.
+# Service image (CPU). When the pipeline needs torch/CUDA, set API_DOCKERFILE=Dockerfile.gpu in .env.
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

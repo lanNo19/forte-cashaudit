@@ -56,7 +56,12 @@ services:
           devices: [{driver: nvidia, device_ids: ["1"], capabilities: [gpu]}]
 
   api:
-    build: .
+    build:
+      context: .
+      # Dockerfile.gpu once the CV layer needs torch (built on the vLLM image: no extra download)
+      dockerfile: ${API_DOCKERFILE:-Dockerfile}
+      args:
+        BASE: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
     env_file: .env
     environment:
       - VLM_BASE_URL=${VLM_BASE_URL:-http://vlm0:8001/v1}
