@@ -30,6 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 21:55 · Claude · UI type scale up for demos (body 17 px, finding title 21, legal points 19, timecode 24, verdict 38); timeline marks closer than 5% stack in lanes so their numbers never overlap.
 - 2026-10-17 21:45 · Claude · UI: results were drawn twice when two status polls returned `done` together (seen on X-30; reproduced with a 2 s server: 6 cards instead of 3); now one poll at a time with a 10 s timeout, render once. Legal basis block: amber, act name first with its points under it, points 16 px, "по аналогии" badge.
 - 2026-10-17 21:25 · Ablay + Claude · VM on main (logprob verify default, Amina's CV fixes, new UI): load test 5× X-14 slowest 157 s (was 177 s), all 5 answer no_violation (the T19 flip is gone), schema OK. cv8b: CV-only 22/42, FA 0/20 on originals and shifted; with VLM (json verify) 26/42, missed 5/22, FA 11/20 (was 13/20).
 - 2026-10-17 21:20 · Claude · UI redesign (#14A): verdict line, incident track under the player (numbered marks, playhead, click to jump), findings in time order with the legal basis split out of the description (point + act link, interpretive refs marked), larger evidence frames with a lightbox, wide videos stack, Russian error texts per status, technical details collapsed, dark mode, mobile. Same `/ui` endpoints, jury JSON untouched. Caddy upload limit 200 → 310 MB to match `MAX_UPLOAD_MB=300`. X-14 load flip = T19 (phone, unseen type) at 88 s.
