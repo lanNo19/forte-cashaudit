@@ -29,6 +29,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 14:10 · Claude · repo pushed to GitHub (private), CI green; labels and issues #1–#10 for sprints 1–2.
 - 2026-10-17 13:55 · Claude · VLM as event sensor (`VLM_MODE`), Qwen3-VL-8B default, one vLLM per GPU, scene filter,
   verifier veto, per-type floors + calibrate tool, video input mode (experimental). 31 tests pass.
 - 2026-10-17 13:25 · Claude · legal index (46 points), candidate types T18–T20, camera-shift set generator.

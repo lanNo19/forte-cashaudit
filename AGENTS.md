@@ -70,7 +70,9 @@ emit them, is in `docs/INTERFACES.md` ("Rules → required events").
 ## How to work (agents and humans)
 
 1. Start by reading `docs/STATUS.md` (what is done, what is a placeholder, what is next) and the section of
-   `docs/INTERFACES.md` for the part you touch.
+   `docs/INTERFACES.md` for the part you touch. Work items are GitHub issues labelled `owner:ml`, `owner:cv`,
+   `owner:platform`, `owner:claude`, `owner:team` and `sprint:N` (`gh issue list -l owner:cv`); each says when it
+   is done. Close it from the PR with `Closes #N`. The sprint board (check-in numbers, decisions) is shared by Ablay.
 2. Work on a branch: `cv/<topic>`, `ml/<topic>`, `platform/<topic>`, `docs/<topic>`. Small PRs, merged often
    (at least before each check-in: 17:00, 21:00, 01:30, 09:30).
 3. Stay inside your owner's files. Changing a **contract** (`schema.py`, `events.py` vocabulary, `analyzers/base.py`,
