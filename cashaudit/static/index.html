@@ -3,120 +3,246 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Проверка кассовой дисциплины</title>
 <style>
-/* System fonts only: the service must work offline inside the bank's network. */
+/* No web fonts or CDNs: the service must work offline inside the bank's network.
+   PT Serif / PT Sans ship with macOS; Windows falls back to Georgia / Segoe UI. */
 :root {
-  --bg: #f4f6f5; --panel: #ffffff; --ink: #17211d; --muted: #5d6b66; --line: #d6ddda;
-  --accent: #155e75; --accent-soft: #e0eef2; --ok: #1f7a4a; --ok-soft: #e1f2e8; --bad: #b42318; --bad-soft: #fbe5e2;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --ground: #e9edf0; --sheet: #ffffff; --ink: #17212b; --muted: #586572; --rule: #cdd4da;
+  --signal: #b42318; --signal-wash: #fbe9e7; --clear: #1e6b45; --clear-wash: #e3f1e9;
+  --steel: #24476b; --steel-wash: #dfe8f1; --screen: #0e1318; --on-signal: #ffffff;
+  --serif: "PT Serif", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "PT Sans", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #101519; --sheet: #182027; --ink: #e4e9ed; --muted: #97a3ae; --rule: #2c3740;
+    --signal: #f2867b; --signal-wash: #3a1f1d; --clear: #62c495; --clear-wash: #18322a;
+    --steel: #93b8dc; --steel-wash: #1e2c39; --screen: #000000; --on-signal: #1a0d0b;
+  }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font); }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 20px; }
-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-h1 { margin: 0; font-size: 24px; letter-spacing: -0.01em; }
-.sub { color: var(--muted); font-size: 14px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
-.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 36px 16px; text-align: center; cursor: pointer; background: var(--panel); }
-.drop.over { border-color: var(--accent); background: var(--accent-soft); }
-.drop strong { display: block; font-size: 17px; margin-bottom: 4px; }
-.btn { font: inherit; font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
-.btn.ghost { background: transparent; color: var(--accent); }
-.btn:focus-visible, .tc:focus-visible, .thumb:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.progress { height: 8px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; }
-.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
-.status { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.spinner { width: 18px; height: 18px; border: 3px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-.verdict { border-radius: 10px; padding: 14px 18px; font-size: 19px; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.verdict.ok { background: var(--ok-soft); color: var(--ok); }
-.verdict.bad { background: var(--bad-soft); color: var(--bad); }
-.verdict small { font-size: 13px; font-weight: 500; color: var(--muted); }
-.grid { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.player { position: sticky; top: 12px; display: grid; gap: 8px; }
-video { width: 100%; max-height: 72vh; background: #000; border-radius: 8px; }
-.timeline { position: relative; height: 22px; background: var(--accent-soft); border-radius: 4px; }
-.mark { position: absolute; top: 0; width: 4px; height: 22px; background: var(--bad); border: 0; padding: 0; cursor: pointer; transform: translateX(-2px); }
-.list { display: grid; gap: 14px; }
-.viol { display: grid; gap: 10px; }
-.viol-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.num { font-family: var(--mono); color: var(--muted); }
-.vtype { font-weight: 700; font-size: 16px; }
-.tc { font-family: var(--mono); font-size: 14px; border: 1px solid var(--bad); color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 1px 8px; cursor: pointer; }
-.conf { font-size: 12px; color: var(--muted); }
-.desc { margin: 0; }
-.refs { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
-.refs a { color: var(--accent); }
-.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
-.thumb { border: 1px solid var(--line); border-radius: 6px; padding: 0; background: none; cursor: zoom-in; position: relative; }
-.thumb img { display: block; height: 150px; border-radius: 6px; }
-.thumb span { position: absolute; left: 4px; bottom: 4px; font: 12px var(--mono); background: rgba(0,0,0,.65); color: #fff; padding: 0 5px; border-radius: 3px; }
-.note { font-size: 13px; color: var(--muted); }
-.err { color: var(--bad); font-weight: 600; }
-.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
-.lightbox img { max-width: 100%; max-height: 92vh; border-radius: 6px; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 var(--sans); }
+button { font: inherit; color: inherit; }
+a { color: var(--steel); text-underline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--steel); outline-offset: 2px; }
 [hidden] { display: none !important; }
-@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } .player { position: static; } }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 16px 64px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 28px; }
+.top h1 { margin: 0; font: 700 22px/1.25 var(--serif); }
+.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+[data-view="result"] .top p, [data-view="error"] .top p { display: none; }
+
+.btn { display: inline-block; border: 1px solid var(--steel); background: var(--steel); color: var(--sheet); border-radius: 6px;
+       padding: 9px 18px; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn.quiet { background: transparent; color: var(--steel); }
+
+/* intake: a viewfinder, since the input is a camera recording */
+.drop { position: relative; display: grid; justify-items: center; gap: 10px; padding: 64px 24px; text-align: center;
+        background: var(--sheet); border-radius: 4px; cursor: pointer; }
+.drop::before, .drop::after { content: ""; position: absolute; inset: 14px; pointer-events: none;
+        border: 3px solid var(--rule); transition: border-color .15s; }
+.drop::before { clip-path: polygon(0 0, 44px 0, 44px 3px, 3px 3px, 3px 44px, 0 44px, 0 calc(100% - 44px), 3px calc(100% - 44px), 3px calc(100% - 3px), 44px calc(100% - 3px), 44px 100%, 0 100%); }
+.drop::after { clip-path: polygon(100% 0, calc(100% - 44px) 0, calc(100% - 44px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 44px, 100% 44px, 100% calc(100% - 44px), calc(100% - 3px) calc(100% - 44px), calc(100% - 3px) calc(100% - 3px), calc(100% - 44px) calc(100% - 3px), calc(100% - 44px) 100%, 100% 100%); }
+.drop:hover::before, .drop:hover::after, .drop.over::before, .drop.over::after { border-color: var(--steel); }
+.drop.over { background: var(--steel-wash); }
+.drop:focus-within { outline: 3px solid var(--steel); outline-offset: 2px; }
+.drop-title { font: 700 24px/1.3 var(--serif); }
+.drop-or { color: var(--muted); }
+.drop-hint { color: var(--muted); font-size: 13px; max-width: 60ch; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* processing */
+.work { background: var(--sheet); border-radius: 4px; padding: 24px; display: grid; gap: 14px; }
+.work-file { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.work-stage { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.work-stage strong { font: 700 19px/1.3 var(--serif); }
+.work-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.spinner { width: 18px; height: 18px; border: 3px solid var(--steel-wash); border-top-color: var(--steel); border-radius: 50%; animation: spin 1s linear infinite; }
+.bar { height: 6px; background: var(--steel-wash); border-radius: 3px; overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--steel); transition: width .2s; }
+.bar.busy > div { width: 30%; animation: slide 1.6s ease-in-out infinite; }
+.work-note { margin: 0; color: var(--muted); font-size: 13px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+.alert { background: var(--signal-wash); border-left: 6px solid var(--signal); border-radius: 4px; padding: 16px 20px; display: grid; gap: 6px; justify-items: start; }
+.alert strong { font: 700 18px/1.3 var(--serif); color: var(--signal); }
+.alert p { margin: 0 0 6px; }
+
+/* verdict */
+.verdict { border-left: 8px solid var(--clear); padding: 4px 0 4px 20px; margin-bottom: 24px; }
+.verdict.bad { border-left-color: var(--signal); }
+.verdict h2 { margin: 0; font: 700 32px/1.2 var(--serif); color: var(--clear); }
+.verdict.bad h2 { color: var(--signal); }
+.verdict p { margin: 6px 0 0; color: var(--muted); }
+
+.review { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.review.wide { grid-template-columns: minmax(0, 1fr); }
+.review.wide .player { position: static; max-width: 960px; }
+
+.player { position: sticky; top: 16px; display: grid; gap: 12px; }
+.screen { background: var(--screen); border-radius: 4px; overflow: hidden; }
+.screen video { display: block; width: 100%; max-height: 70vh; background: var(--screen); }
+.player-note { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* the incident track: the one bold element. Notches = findings, line = playhead */
+.track { position: relative; padding-top: 22px; }
+.track-bar { position: relative; height: 34px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 3px; cursor: pointer; }
+.notch { position: absolute; top: -23px; bottom: -1px; width: 22px; margin-left: -11px; border: 0; padding: 0; background: none; cursor: pointer; }
+.notch::before { content: ""; position: absolute; left: 10px; top: 20px; bottom: 0; width: 3px; background: var(--signal); }
+.notch span { position: absolute; top: 0; left: 0; width: 22px; height: 20px; border-radius: 3px; background: var(--signal); color: var(--on-signal);
+              font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.notch.active span { outline: 2px solid var(--ink); outline-offset: 1px; }
+.playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); left: 0; pointer-events: none; }
+.track-scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+
+/* findings: a numbered protocol, in time order */
+.findings { list-style: none; margin: 0; padding: 0; background: var(--sheet); border-radius: 4px; }
+.finding { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 0 18px; padding: 22px 24px 24px 0; border-top: 1px solid var(--rule); }
+.finding:first-child { border-top: 0; }
+.finding.active { box-shadow: inset 4px 0 0 var(--signal); }
+.when { display: grid; justify-items: end; align-content: start; gap: 4px; }
+.when .n { color: var(--signal); font-weight: 700; font-size: 13px; }
+.tc { border: 0; background: none; padding: 0; color: var(--steel); font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.finding h3 { margin: 0 0 6px; font-size: 17px; line-height: 1.35; }
+.what { margin: 0 0 14px; max-width: 70ch; }
+.basis { margin: 0 0 16px; padding: 10px 14px; background: var(--ground); border-radius: 3px; font-size: 14px; max-width: 72ch; }
+.basis h4 { margin: 0 0 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.basis ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.basis b { font-variant-numeric: tabular-nums; }
+.basis .interp { color: var(--muted); font-style: italic; }
+.basis .act { display: inline-block; margin-top: 6px; font-size: 13px; }
+.frames { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 560px; }
+.frame { position: relative; border: 0; padding: 0; background: var(--screen); border-radius: 3px; overflow: hidden; cursor: zoom-in; }
+.frame img { display: block; width: 100%; height: 100%; max-height: 300px; object-fit: contain; }
+.frame span { position: absolute; left: 6px; bottom: 6px; background: rgba(0, 0, 0, .7); color: #fff; font-size: 12px; font-weight: 600; padding: 1px 6px; border-radius: 2px; font-variant-numeric: tabular-nums; }
+.facts { margin: 12px 0 0; color: var(--muted); font-size: 13px; display: flex; gap: 6px 18px; flex-wrap: wrap; }
+.empty { background: var(--sheet); border-radius: 4px; padding: 24px; }
+.empty p { margin: 0; max-width: 60ch; }
+.empty p + p { margin-top: 8px; color: var(--muted); font-size: 14px; }
+
+.disclaimer { margin: 28px 0 0; color: var(--muted); font-size: 13px; max-width: 80ch; }
+.tech { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.tech summary { cursor: pointer; width: max-content; }
+.tech dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 10px 0 0; }
+.tech dt { color: var(--muted); }
+.tech dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+.lightbox { position: fixed; inset: 0; z-index: 10; background: rgba(5, 8, 11, .9); display: grid; place-items: center; padding: 16px; }
+.lightbox figure { margin: 0; display: grid; gap: 10px; justify-items: center; }
+.lightbox img { max-width: 100%; max-height: 84vh; border-radius: 3px; }
+.lightbox figcaption { color: #e4e9ed; font-size: 14px; text-align: center; }
+.lightbox button { position: absolute; top: 12px; right: 12px; border: 1px solid #e4e9ed; background: none; color: #e4e9ed; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+
+@media (max-width: 860px) {
+  .top { flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .review { grid-template-columns: minmax(0, 1fr); }
+  .player { position: static; max-width: 420px; }
+  .review.wide .player { max-width: none; }
+  .verdict h2 { font-size: 26px; }
+  .finding { grid-template-columns: minmax(0, 1fr); padding: 18px 16px 20px; }
+  .when { justify-items: start; grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .drop { padding: 48px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner, .bar.busy > div { animation: none; }
+  .bar.busy > div { width: 100%; opacity: .35; }
+}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <header>
+<body data-view="drop">
+<div class="page">
+  <header class="top">
     <div>
-      <h1>Проверка кассовой дисциплины по видео</h1>
-      <div class="sub">Загрузите запись с камеры кассы. Сервис покажет признаки возможных нарушений, таймкоды, кадры и нормативное основание.</div>
+      <h1>Проверка кассовой дисциплины</h1>
+      <p>Загрузите запись камеры над рабочим местом кассира или в кассовом помещении. Сервис найдёт моменты возможных нарушений и покажет кадры и пункт нормативного акта.</p>
     </div>
-    <button class="btn ghost" id="again" hidden>Новая проверка</button>
+    <button class="btn quiet" id="again" hidden>Новая проверка</button>
   </header>
 
-  <label class="drop" id="drop" for="file">
-    <strong>Перетащите видео сюда или нажмите, чтобы выбрать</strong>
-    <span class="sub">Формат .mov (также .mp4), до 300 МБ</span>
-    <input id="file" type="file" accept=".mov,.mp4,.m4v,video/*" hidden>
-  </label>
+  <main>
+    <label class="drop" id="drop">
+      <span class="drop-title">Перетащите видео сюда</span>
+      <span class="drop-or">или</span>
+      <span class="btn">Выбрать файл</span>
+      <span class="drop-hint">MOV или MP4, до 300 МБ. Ответ приходит в течение 5 минут. Запись удаляется после анализа, лица не распознаются.</span>
+      <input id="file" type="file" accept=".mov,.mp4,.m4v,video/*">
+    </label>
 
-  <section class="card" id="progressCard" hidden>
-    <div class="status"><div class="spinner" id="spin"></div><strong id="stageText">Загрузка…</strong><span class="sub" id="elapsed"></span></div>
-    <div class="progress" style="margin-top:12px"><div id="bar"></div></div>
-    <p class="note" id="fname"></p>
-  </section>
+    <section class="work" id="work" aria-live="polite" hidden>
+      <p class="work-file" id="fname"></p>
+      <div class="work-stage"><div class="spinner" aria-hidden="true"></div><strong id="stageText">Загрузка видео</strong><span class="work-time" id="elapsed"></span></div>
+      <div class="bar" id="barWrap"><div id="bar"></div></div>
+      <p class="work-note" id="stageNote">Не закрывайте страницу до конца загрузки.</p>
+    </section>
 
-  <p class="err" id="error" hidden></p>
-
-  <section id="result" hidden>
-    <div class="verdict" id="verdict"></div>
-    <div class="grid" style="margin-top:16px">
-      <div class="player card">
-        <video id="video" controls playsinline muted></video>
-        <p class="note" id="vnote" hidden>Этот браузер не воспроизводит формат файла. Используйте кадры-доказательства справа или откройте страницу в Chrome / Safari.</p>
-        <div class="timeline" id="timeline" aria-label="Метки нарушений на шкале времени"></div>
-        <div class="note">Нажмите на таймкод или кадр, чтобы перейти к моменту в видео.</div>
-      </div>
-      <div class="list" id="list"></div>
+    <div class="alert" id="error" role="alert" hidden>
+      <strong id="errTitle"></strong>
+      <p id="errText"></p>
+      <button class="btn quiet" id="errAgain">Загрузить другой файл</button>
     </div>
-    <p class="note" style="margin-top:16px">Результат является подсказкой для проверки человеком, а не юридическим или дисциплинарным заключением. Сервис не делает выводов о том, что не видно на видео (проводки, сверки, данные систем).</p>
-  </section>
+
+    <section id="result" hidden>
+      <div class="verdict" id="verdict"><h2 id="vTitle"></h2><p id="vMeta"></p></div>
+      <div class="review" id="review">
+        <div class="player">
+          <div class="screen"><video id="video" controls playsinline muted preload="metadata"></video></div>
+          <p class="player-note" id="vnote" hidden>Браузер не воспроизводит этот формат. Кадры-доказательства доступны справа; видео откроется в Chrome или Safari.</p>
+          <div class="track" id="track" hidden>
+            <div class="track-bar" id="trackBar" title="Перейти к моменту записи"><div class="playhead" id="playhead"></div></div>
+            <div class="track-scale"><span>0:00</span><span id="durLabel"></span></div>
+          </div>
+          <p class="player-note" id="trackNote">Красные метки на шкале — найденные моменты. Нажмите на метку или время, чтобы посмотреть запись с этого места.</p>
+        </div>
+        <div id="listWrap"><ol class="findings" id="list"></ol></div>
+      </div>
+      <p class="disclaimer">Результат помогает проверяющему быстро найти нужные моменты записи. Решение о нарушении принимает человек. Сервис не делает выводов о том, чего не видно на видео: проводках, сверках, данных систем.</p>
+      <details class="tech" id="tech"><summary>Технические сведения</summary><dl id="techList"></dl></details>
+    </section>
+  </main>
 </div>
-<div class="lightbox" id="lightbox" hidden><img id="lbimg" alt=""></div>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button id="lbClose">Закрыть</button>
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+</div>
 
 <script>
 (function () {
+  "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var fileUrl = null, pollTimer = null, t0 = 0, duration = 0;
+  var fileUrl = null, pollTimer = null, t0 = 0, duration = 0, findings = [], activeIdx = -1, current = null;
+  var SCENES = { A: "стойка обслуживания клиентов", B: "кассовое помещение" };
+  var SOURCES = { events: "детектор и правила", vlm: "визуальная модель", fused: "детектор и визуальная модель" };
 
-  function fmt(t) { t = Math.max(0, t); var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); }
+  function fmt(t) {
+    t = Math.max(0, t || 0); var m = Math.floor(t / 60), s = t - m * 60;
+    return m + ":" + (s < 10 ? "0" : "") + (Math.abs(s - Math.round(s)) < 0.05 ? Math.round(s) : s.toFixed(1));
+  }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  function showError(msg) { $("error").textContent = msg; $("error").hidden = false; $("progressCard").hidden = true; $("again").hidden = false; }
+  function plural(n, one, few, many) { var a = n % 10, b = n % 100; return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many; }
+
+  function show(which) {
+    $("drop").hidden = which !== "drop"; $("work").hidden = which !== "work";
+    $("result").hidden = which !== "result"; $("error").hidden = which !== "error";
+    $("again").hidden = which !== "result"; document.body.setAttribute("data-view", which);
+  }
+  function fail(title, text) { clearInterval(pollTimer); $("errTitle").textContent = title; $("errText").textContent = text; show("error"); }
 
   function reset() {
-    clearInterval(pollTimer); $("result").hidden = true; $("error").hidden = true; $("progressCard").hidden = true; $("vnote").hidden = true; duration = 0;
-    $("drop").hidden = false; $("again").hidden = true; $("file").value = ""; $("list").innerHTML = ""; $("timeline").innerHTML = "";
+    clearInterval(pollTimer); findings = []; activeIdx = -1; duration = 0; current = null;
+    $("file").value = ""; $("list").innerHTML = ""; $("techList").innerHTML = ""; $("vnote").hidden = true; $("track").hidden = true;
+    $("trackBar").querySelectorAll(".notch").forEach(function (n) { n.remove(); });
+    var v = $("video"); v.pause(); v.removeAttribute("src"); v.load();
     if (fileUrl) { URL.revokeObjectURL(fileUrl); fileUrl = null; }
+    show("drop");
   }
   $("again").addEventListener("click", reset);
+  $("errAgain").addEventListener("click", reset);
 
   var drop = $("drop");
   ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
@@ -125,86 +251,195 @@ video { width: 100%; max-height: 72vh; background: #000; border-radius: 8px; }
   $("file").addEventListener("change", function () { if (this.files[0]) upload(this.files[0]); });
 
   function upload(file) {
-    reset(); $("drop").hidden = true; $("progressCard").hidden = false; $("spin").hidden = false;
-    $("stageText").textContent = "Загрузка видео…"; $("fname").textContent = file.name + " · " + (file.size / 1e6).toFixed(1) + " МБ";
+    reset(); show("work"); current = file;
+    $("fname").textContent = file.name + ", " + (file.size / 1e6).toFixed(1) + " МБ";
+    $("stageText").textContent = "Загрузка видео"; $("elapsed").textContent = "0%";
+    $("stageNote").textContent = "Не закрывайте страницу до конца загрузки.";
+    $("barWrap").classList.remove("busy"); $("bar").style.width = "0";
     fileUrl = URL.createObjectURL(file);
     var fd = new FormData(); fd.append("file", file);
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "/ui/analyze");
-    xhr.upload.onprogress = function (e) { if (e.lengthComputable) $("bar").style.width = (100 * e.loaded / e.total).toFixed(0) + "%"; };
-    xhr.onload = function () {
-      var body = {}; try { body = JSON.parse(xhr.responseText); } catch (e) {}
-      if (xhr.status !== 200) return showError("Не удалось принять файл: " + (body.detail || xhr.status));
-      $("bar").style.width = "100%"; t0 = Date.now(); poll(body.job_id);
+    xhr.upload.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      var p = Math.round(100 * e.loaded / e.total); $("bar").style.width = p + "%"; $("elapsed").textContent = p + "%";
     };
-    xhr.onerror = function () { showError("Нет связи с сервером. Проверьте подключение и попробуйте ещё раз."); };
+    xhr.onload = function () {
+      var body = {}; try { body = JSON.parse(xhr.responseText); } catch (e) { /* not JSON: a proxy error page */ }
+      if (xhr.status === 413) return fail("Файл слишком большой", "Можно загрузить видео до 300 МБ. Сократите запись или сожмите её и загрузите снова.");
+      if (xhr.status === 400) return fail("Файл не похож на видео", "Загрузите запись в формате MOV или MP4. Если файл открывается в плеере, сохраните его заново и попробуйте ещё раз.");
+      if (xhr.status !== 200 || !body.job_id) return fail("Сервер не принял файл", "Ответ сервера: " + (body.detail || xhr.status) + ". Загрузите видео ещё раз через минуту.");
+      t0 = Date.now(); poll(body.job_id);
+    };
+    xhr.onerror = function () { fail("Нет связи с сервером", "Проверьте подключение к сети и загрузите видео снова."); };
     xhr.send(fd);
   }
 
   function poll(jobId) {
-    $("stageText").textContent = "Анализ видео…";
+    $("stageText").textContent = "В очереди на анализ"; $("elapsed").textContent = "";
+    $("stageNote").textContent = "Обычно анализ занимает 1–3 минуты, ответ приходит не позже чем через 5 минут после загрузки. Страницу можно не обновлять.";
+    $("barWrap").classList.add("busy"); $("bar").style.width = "";
+    var misses = 0;
     pollTimer = setInterval(function () {
       $("elapsed").textContent = Math.round((Date.now() - t0) / 1000) + " с";
-      fetch("/ui/jobs/" + jobId, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (b) {
+      fetch("/ui/jobs/" + jobId, { cache: "no-store" }).then(function (r) {
+        if (r.status === 404) throw new Error("gone");
+        return r.json();
+      }).then(function (b) {
+        misses = 0;
         if (b.status === "done") { clearInterval(pollTimer); render(b); }
-        else if (b.status === "failed") { clearInterval(pollTimer); showError("Анализ не выполнен: " + (b.error || "ошибка") + ". Попробуйте загрузить видео ещё раз."); }
-        else { $("stageText").textContent = b.stage === "queued" ? "В очереди на анализ…" : "Анализ видео…"; }
-      }).catch(function () {});
+        else if (b.status === "failed") fail("Анализ не завершён", "Причина: " + (b.error || "ошибка анализа") + ". Загрузите видео ещё раз.");
+        else $("stageText").textContent = b.stage === "queued" ? "В очереди на анализ" : "Идёт анализ";
+      }).catch(function (e) {
+        if (e && e.message === "gone") return fail("Проверка не найдена", "Сервис был перезапущен во время анализа. Загрузите видео ещё раз.");
+        if (++misses >= 20) fail("Нет связи с сервером", "Сервер не отвечает уже 30 секунд. Проверьте подключение и загрузите видео снова.");
+      });
     }, 1500);
   }
 
-  function seek(t) { var v = $("video"); v.currentTime = Math.max(0, t - 0.5); v.play().catch(function () {}); setTimeout(function () { v.pause(); }, 1500); }
+  function setActive(i) {
+    if (i === activeIdx) return; activeIdx = i;
+    findings.forEach(function (f, k) { f.li.classList.toggle("active", k === i); f.notch.classList.toggle("active", k === i); });
+  }
+  function seek(t, i) {
+    var v = $("video"); if (i != null) setActive(i);
+    if (!v.src) return;
+    v.currentTime = Math.max(0, t - 2); v.play().catch(function () {});
+  }
 
-  function render(b) {
-    $("progressCard").hidden = true; $("result").hidden = false; $("again").hidden = false;
-    var v = $("video"); v.src = fileUrl;
-    var bad = b.verdict === "violation";
-    var vd = $("verdict"); vd.className = "verdict " + (bad ? "bad" : "ok"); vd.innerHTML = "";
-    vd.appendChild(el("span", null, bad ? "Обнаружены признаки возможных нарушений" : "Нарушение не обнаружено"));
-    vd.appendChild(el("small", null, (bad ? "Найдено: " + b.violations.length + " · " : "") + "анализ " + (b.elapsed_sec || "?") + " с"));
-    var list = $("list"), tl = $("timeline");
-    if (!bad) list.appendChild(el("p", "note card", "Видимых признаков нарушений не найдено. Это не исключает нарушений, которые нельзя увидеть на записи."));
-    function drawMarks(d) {
-      duration = d || 0; tl.innerHTML = "";
-      if (!duration) return;
-      b.violations.forEach(function (x, i) {
-        var m = el("button", "mark"); m.style.left = Math.min(100, 100 * x.timecode_sec / duration) + "%";
-        m.title = (i + 1) + ". " + x.type + " · " + fmt(x.timecode_sec); m.setAttribute("aria-label", m.title);
-        m.onclick = function () { seek(x.timecode_sec); }; tl.appendChild(m);
-      });
-    }
-    drawMarks(b.meta && b.meta.duration);
-    v.onloadedmetadata = function () { if (!duration && v.duration) drawMarks(v.duration); };
-    v.onerror = function () { $("vnote").hidden = false; };
-    b.violations.forEach(function (x, i) {
-      var c = el("article", "card viol"), h = el("div", "viol-head");
-      h.appendChild(el("span", "num", "№" + (i + 1)));
-      h.appendChild(el("span", "vtype", x.type));
-      var tc = el("button", "tc", fmt(x.timecode_sec)); tc.title = "Перейти к моменту"; tc.onclick = function () { seek(x.timecode_sec); }; h.appendChild(tc);
-      if (x.confidence != null) h.appendChild(el("span", "conf", "уверенность " + Math.round(100 * x.confidence) + "%"));
-      c.appendChild(h);
-      c.appendChild(el("p", "desc", x.description));
-      if (x.refs && x.refs.length) {
-        var ul = el("ul", "refs");
-        x.refs.forEach(function (r) {
-          var li = el("li"); var a = el("a", null, r.act + ", " + r.point); a.href = r.url; a.target = "_blank"; a.rel = "noopener";
-          li.appendChild(a); if (r.strength === "interpretive") li.appendChild(document.createTextNode(" (по аналогии/толкованию)")); ul.appendChild(li);
-        });
-        c.appendChild(ul);
-      }
-      var th = el("div", "thumbs");
-      (x.evidence_frames || []).forEach(function (f) {
-        var bt = el("button", "thumb"); var img = el("img"); img.src = "data:image/jpeg;base64," + f.image_base64; img.alt = "Кадр " + fmt(f.timestamp_sec);
-        bt.appendChild(img); bt.appendChild(el("span", null, fmt(f.timestamp_sec)));
-        bt.onclick = function () { $("lbimg").src = img.src; $("lightbox").hidden = false; seek(f.timestamp_sec); };
-        th.appendChild(bt);
-      });
-      c.appendChild(th);
-      list.appendChild(c);
+  function drawTrack() {
+    var bar = $("trackBar");
+    bar.querySelectorAll(".notch").forEach(function (n) { n.remove(); });
+    if (!duration) return;
+    $("track").hidden = false; $("durLabel").textContent = fmt(duration);
+    findings.forEach(function (f, i) {
+      var n = el("button", "notch"); n.appendChild(el("span", null, String(i + 1)));
+      n.style.left = Math.min(100, Math.max(0, 100 * f.t / duration)) + "%";
+      n.setAttribute("aria-label", "Момент " + (i + 1) + ", " + fmt(f.t) + ": " + f.type);
+      n.title = (i + 1) + ". " + f.type + ", " + fmt(f.t);
+      n.addEventListener("click", function (e) { e.stopPropagation(); seek(f.t, i); });
+      f.notch = n; bar.appendChild(n);
     });
   }
-  $("lightbox").addEventListener("click", function () { this.hidden = true; });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") $("lightbox").hidden = true; });
+  $("trackBar").addEventListener("click", function (e) {
+    if (!duration) return; var r = this.getBoundingClientRect();
+    var v = $("video"); v.currentTime = Math.max(0, Math.min(duration, duration * (e.clientX - r.left) / r.width));
+  });
+  $("video").addEventListener("timeupdate", function () {
+    if (!duration) return; var t = this.currentTime;
+    $("playhead").style.left = Math.min(100, 100 * t / duration) + "%";
+    var hit = -1; findings.forEach(function (f, i) { if (t >= f.t - 2 && t <= f.t + 3) hit = i; });
+    if (hit >= 0) setActive(hit);
+  });
+
+  function splitDescription(d) {
+    var i = (d || "").indexOf(" Основание:");
+    return i > 0 ? d.slice(0, i) : (d || "").replace(/\s*Требуется проверка человеком\.?\s*$/, "");
+  }
+  function basisBlock(refs) {
+    var box = el("div", "basis"); box.appendChild(el("h4", null, "Основание"));
+    var acts = []; refs.forEach(function (r) { var a = acts.filter(function (x) { return x.act === r.act; })[0]; if (!a) { a = { act: r.act, url: r.url, items: [] }; acts.push(a); } a.items.push(r); });
+    acts.forEach(function (a) {
+      var ul = el("ul");
+      a.items.forEach(function (r) {
+        var li = el("li"), m = /^(п\.\s*[\d.]+(?:\s*подп\.\s*\d+\)?)?)\s*(.*)$/.exec(r.point || "");
+        if (m) { li.appendChild(el("b", null, m[1])); li.appendChild(document.createTextNode(" " + m[2].replace(/^\(|\)$/g, ""))); }
+        else li.appendChild(document.createTextNode(r.point || ""));
+        if (r.strength === "interpretive") { li.appendChild(document.createTextNode(" ")); li.appendChild(el("span", "interp", "по аналогии, требует толкования")); }
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      var link = el("a", "act", a.act); link.href = a.url; link.target = "_blank"; link.rel = "noopener"; box.appendChild(link);
+    });
+    return box;
+  }
+
+  function openFrame(src, caption, t, i) {
+    $("lbImg").src = src; $("lbImg").alt = caption; $("lbCap").textContent = caption; $("lightbox").hidden = false; $("lbClose").focus();
+    seek(t + 2, i);
+  }
+  function closeFrame() { $("lightbox").hidden = true; }
+  $("lightbox").addEventListener("click", function (e) { if (e.target === this || e.target.id === "lbClose") closeFrame(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeFrame(); });
+
+  function render(b) {
+    show("result");
+    var vs = b.violations || [], bad = b.verdict === "violation" && vs.length > 0, meta = b.meta || {};
+    var vd = $("verdict"); vd.className = "verdict" + (bad ? " bad" : "");
+    $("vTitle").textContent = bad ? (vs.length === 1 ? "Обнаружено возможное нарушение" : "Обнаружены возможные нарушения: " + vs.length) : "Нарушений не обнаружено";
+    var parts = [];
+    if (current) parts.push("Файл " + current.name);
+    if (meta.duration) parts.push("запись " + fmt(meta.duration));
+    if (b.elapsed_sec != null) parts.push("анализ занял " + Math.round(b.elapsed_sec) + " с");
+    $("vMeta").textContent = parts.join(", ") + ".";
+
+    var v = $("video"); v.src = fileUrl;
+    v.onloadedmetadata = function () {
+      if (v.videoWidth > v.videoHeight * 1.1) $("review").classList.add("wide");
+      if (!duration && v.duration && isFinite(v.duration)) { duration = v.duration; drawTrack(); }
+    };
+    v.onerror = function () { $("vnote").hidden = false; };
+
+    var list = $("list"), wrap = $("listWrap");
+    wrap.querySelectorAll(".empty").forEach(function (n) { n.remove(); });
+    list.hidden = !bad; $("trackNote").hidden = !bad;
+    if (!bad) {
+      var box = el("div", "empty");
+      box.appendChild(el("p", null, "Видимых признаков нарушений на записи не найдено."));
+      box.appendChild(el("p", null, "Это не исключает нарушений, которые нельзя увидеть на видео. При сомнениях просмотрите запись вручную."));
+      wrap.appendChild(box);
+    }
+    findings = vs.map(function (x, i) {
+      var f = { t: x.timecode_sec, type: x.type };
+      var li = el("li", "finding"); f.li = li;
+      var when = el("div", "when"); when.appendChild(el("span", "n", "№" + (i + 1)));
+      var tc = el("button", "tc", fmt(x.timecode_sec)); tc.setAttribute("aria-label", "Смотреть запись с " + fmt(x.timecode_sec));
+      tc.addEventListener("click", function () { seek(x.timecode_sec, i); }); when.appendChild(tc); li.appendChild(when);
+
+      var body = el("div");
+      body.appendChild(el("h3", null, x.type));
+      body.appendChild(el("p", "what", splitDescription(x.description)));
+      if (x.refs && x.refs.length) body.appendChild(basisBlock(x.refs));
+      else if ((x.description || "").indexOf("Основание:") >= 0) {
+        var bb = el("div", "basis"); bb.appendChild(el("h4", null, "Основание"));
+        bb.appendChild(el("p", null, x.description.slice(x.description.indexOf("Основание:") + 11).replace(/\s*Требуется проверка человеком\.?\s*$/, "")));
+        bb.lastChild.style.margin = "0"; body.appendChild(bb);
+      }
+      var frames = el("div", "frames");
+      (x.evidence_frames || []).forEach(function (fr) {
+        var bt = el("button", "frame"), img = el("img"), cap = "№" + (i + 1) + ", " + x.type + ", кадр " + fmt(fr.timestamp_sec);
+        img.src = "data:image/jpeg;base64," + fr.image_base64; img.alt = "Кадр " + fmt(fr.timestamp_sec); img.loading = "lazy";
+        bt.appendChild(img); bt.appendChild(el("span", null, fmt(fr.timestamp_sec)));
+        bt.setAttribute("aria-label", "Открыть кадр " + fmt(fr.timestamp_sec));
+        bt.addEventListener("click", function () { openFrame(img.src, cap, fr.timestamp_sec, i); });
+        frames.appendChild(bt);
+      });
+      if (frames.children.length) body.appendChild(frames);
+      var facts = el("p", "facts");
+      if (x.confidence != null) facts.appendChild(el("span", null, "Уверенность " + Math.round(100 * x.confidence) + "%"));
+      if (x.source && SOURCES[x.source]) facts.appendChild(el("span", null, "Найдено: " + SOURCES[x.source]));
+      if (facts.children.length) body.appendChild(facts);
+      li.appendChild(body); list.appendChild(li);
+      return f;
+    });
+
+    if (meta.duration) { duration = meta.duration; drawTrack(); }
+    renderTech(b, meta);
+  }
+
+  function renderTech(b, meta) {
+    var dl = $("techList"); dl.innerHTML = "";
+    function row(k, val) { if (val == null || val === "") return; dl.appendChild(el("dt", null, k)); dl.appendChild(el("dd", null, String(val))); }
+    row("Сцена", meta.scene ? (SCENES[meta.scene] || meta.scene) : "не определена");
+    row("Кадров обработано", meta.n_frames != null ? meta.n_frames + (meta.fps_used ? " (" + meta.fps_used + " кадр/с)" : "") : null);
+    row("Событий от детектора", meta.n_events); row("Событий от визуальной модели", meta.n_vlm_events);
+    row("Кандидатов до проверки", meta.n_candidates);
+    if (meta.stages) row("Этапы, с", Object.keys(meta.stages).map(function (k) { return k + " " + meta.stages[k]; }).join("; "));
+    row("Время анализа, с", meta.runtime_sec);
+    (b.violations || []).forEach(function (x, i) { if (x.type_id) row("№" + (i + 1), x.type_id + (x.source ? ", " + x.source : "")); });
+    (meta.warnings || []).forEach(function (w) { row("Предупреждение", w); });
+    $("tech").hidden = !dl.children.length;
+  }
 })();
 </script>
 </body>
