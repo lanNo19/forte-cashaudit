@@ -11,6 +11,7 @@
 #   own [tag]         our own phone clips: var/own_raw/{OWN-xxa/b clips, shotlog.csv} -> jury format, one BOARD line per
 #                     phone (a, b), packed as ~/own-<tag>.tgz (tools/prepare_own.py explains the shot log)
 #   load              jury worst case: the largest clip uploaded 5 times at once; slowest must be < 240 s
+#                     (results in var/runs/load, or var/runs/$LOAD_OUT)
 #   logs [15m]        errors, timeouts and warnings from the API log
 #   pin               freeze the vLLM image to the digest that is running, switch to offline weights, restart
 #   idle              is it safe to stop the VM now? (no job queued or running)
@@ -81,7 +82,7 @@ case "${1:-status}" in
     ;;
   load)
     wait_ready
-    in_api 'big=$(ls -S var/videos/*.mov | head -1); d=$(mktemp -d); for i in 1 2 3 4 5; do ln -s "$PWD/$big" "$d/worst-$i.mov"; done; echo "5 x $big"; python3 tools/eval.py --api http://localhost:8000 --key "${API_KEYS%%,*}" --files "$d"/*.mov --out var/runs/load --parallel 5; rm -rf "$d"'
+    in_api 'big=$(ls -S var/videos/*.mov | head -1); d=$(mktemp -d); for i in 1 2 3 4 5; do ln -s "$PWD/$big" "$d/worst-$i.mov"; done; echo "5 x $big"; python3 tools/eval.py --api http://localhost:8000 --key "${API_KEYS%%,*}" --files "$d"/*.mov --out var/runs/'"${LOAD_OUT:-load}"' --parallel 5; rm -rf "$d"'
     ;;
   logs)
     docker compose logs --since "${2:-15m}" api 2>&1 | grep -i -E "error|timeout|warn|traceback" | tail -60 || echo "no errors in the last ${2:-15m}"
