@@ -19,3 +19,4 @@ One line per decision: date, decision, why, who. Newest first. Reverse a decisio
 | 2026-10-17 13:00 | Jury API exactly per section 10; extras only behind `API_EXTRA_FIELDS` | automatic scoring | team |
 | 2026-10-17 13:00 | Citations only from `data/legal_index.json`; interpretive references labelled | criterion 4 penalises invented references | team |
 | 2026-10-17 12:45 | Hybrid architecture: CV event layer + local VLM + rule engine + fusion | few examples per type, unseen types, new angle | team |
+- 2026-10-17 · ML lead · Verify uses P(yes) from logprobs by default (VERIFY_MODE=logprob). CV+VLM both on 42 clips: 24/42 → 32/42, false alarms 13/20 → 4/20, missed 5 → 6. Set VERIFY_MODE=json to get the old verify back.

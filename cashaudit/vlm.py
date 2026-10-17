@@ -261,7 +261,7 @@ class VLMClient:
         t = kb.load_kb()["by_id"].get(v.type_id)
         rule = f"{t['name']}. Visual cue: {t['cue']}" if t else v.type
         when = v.timecode_sec - frames[0][0] if self.input_mode == "video" else v.timecode_sec
-        if os.getenv("VERIFY_MODE", "json") == "logprob":
+        if os.getenv("VERIFY_MODE", "logprob") == "logprob":
             return self._verify_logprob(frames, v, rule, when)
         prompt = (
             f"{self._time_hint(frames)}\nRule: {rule}\nClaim: around t={when:.1f}s this rule is broken.\n"
