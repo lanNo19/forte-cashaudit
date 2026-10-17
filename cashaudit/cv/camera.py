@@ -40,13 +40,21 @@ class Camera:
     room_floor: Optional[List[Point]] = None
     door: Optional[List[Point]] = None
     zones: Dict[str, Dict[str, List[Point]]] = field(default_factory=dict)  # scene -> {"safe": [...]}
+    # 3x3 homography (or 2x3 affine), normalized video coords -> the frame the polygons were drawn on (roi.py)
+    to_ref: Optional[np.ndarray] = None
+
+    def ref(self, p: Point) -> Point:
+        if self.to_ref is None:
+            return p
+        v = self.to_ref @ np.array([p[0], p[1], 1.0])
+        return (float(v[0] / v[2]), float(v[1] / v[2])) if len(v) == 3 else (float(v[0]), float(v[1]))
 
     def in_room(self, p: Point) -> bool:
-        return _inside(p, self.room_floor) if self.room_floor else True
+        return _inside(self.ref(p), self.room_floor) if self.room_floor else True
 
     def near_door(self, p: Point) -> bool:
         if self.door:
-            return _inside(p, self.door)
+            return _inside(self.ref(p), self.door)
         x, y = p
         return min(x, y, 1 - x, 1 - y) < EDGE
 
@@ -54,8 +62,9 @@ class Camera:
         """desk | safe | door. Furniture moves between layouts, so zones other than the door are per scene."""
         if self.near_door(p):
             return "door"
+        q = self.ref(p)
         for name, poly in self.zones.get(scene or "", {}).items():
-            if _inside(p, poly):
+            if _inside(q, poly):
                 return name
         return "desk"
 
