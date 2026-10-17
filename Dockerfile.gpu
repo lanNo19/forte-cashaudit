@@ -5,7 +5,9 @@
 ARG BASE=vllm/vllm-openai:latest
 FROM ${BASE}
 
-ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1 PYTHONUNBUFFERED=1 DATA_DIR=/app/var
+# checked on the VM 17 Oct: vLLM image = Python 3.12.3, pip 26.2.1, ffmpeg, torch 2.13.0+cu130, cv2 5.0.0, numpy 2.2.6.
+# Its Python is the Ubuntu system one, so pip needs PIP_BREAK_SYSTEM_PACKAGES (we only add packages, never replace torch).
+ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1 PIP_BREAK_SYSTEM_PACKAGES=1 PYTHONUNBUFFERED=1 DATA_DIR=/app/var
 RUN command -v ffmpeg >/dev/null 2>&1 \
  || (apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*)
 
