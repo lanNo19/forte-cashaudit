@@ -67,6 +67,10 @@ SCENES = {
 Frames = List[Tuple[float, np.ndarray]]
 
 
+# A scan window that names this many different rules is copying the rule list, not looking.
+SCAN_MAX_RULES = int(os.getenv("SCAN_MAX_RULES", "4"))
+
+
 def _rule_cards(ids: Optional[Sequence[str]] = None) -> str:
     lines = []
     for t in kb.load_kb()["types"]:
@@ -187,7 +191,7 @@ class VLMClient:
         scene, conf = str(data.get("scene", "")).upper(), float(data.get("confidence", 0) or 0)
         return scene if scene in SCENES and conf >= 0.6 else None
 
-    def scan_window(self, frames: Frames, ids: Optional[Sequence[str]] = None) -> List[Violation]:
+    def scan_window(self, frames: Frames, ids: Optional[Sequence[str]] = None, _retry: bool = False) -> List[Violation]:
         """One window -> candidate violations (source='vlm')."""
         prompt = (
             f"{self._time_hint(frames)}\n"
@@ -198,6 +202,9 @@ class VLMClient:
             'If no rule is clearly broken, return {"violations": []}.\n'
             "t = when the rule is first broken. confidence: 0.9+ only if it is unambiguous."
         )
+        if _retry:
+            prompt += ("\nName only violations you actually see in these frames. Most windows have none or one. "
+                       "Do not list rules just because they are in the list.")
         data = _extract_json(self.chat(frames, prompt))
         out = []
         for item in data.get("violations", []) or []:
@@ -213,6 +220,11 @@ class VLMClient:
             out.append(Violation(type_id=tid, type=kb.type_name(tid), timecode_sec=t,
                                  description=kb.describe(tid, observed, extra_refs=refs if tid == kb.UNSEEN_TYPE_ID else None),
                                  evidence_ts=[t], confidence=conf, source="vlm", refs=refs))
+        named = {v.type_id for v in out}
+        if len(named) >= SCAN_MAX_RULES:
+            print(f"SCAN window names {len(named)} rules{' after retry, dropped' if _retry else ', retrying'}",
+                  file=sys.stderr, flush=True)
+            return [] if _retry else self.scan_window(frames, ids, _retry=True)
         return out
 
     def extract_events(self, frames: Frames, samples: int = 1, temperature: float = 0.0) -> List["Event"]:
