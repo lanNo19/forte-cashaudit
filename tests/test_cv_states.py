@@ -111,3 +111,9 @@ def test_long_unknown_gap_breaks_a_run():  # A100 X-31: "y???y" made a false doo
 
 def test_key_is_off_by_default():
     assert "key" not in states.roi_boxes({"safe": (0.5, (0.4, 0.3, 0.5, 0.4))}, None)
+
+
+def test_one_unknown_at_real_frame_times_does_not_break_a_run():  # A100 X-25: samples at 29.97 fps frame times
+    ser = [(i * 1.001, v) for i, v in enumerate([False] * 8 + [True] * 4 + [False, None, False] + [True] * 4 + [False] * 3)]
+    assert kinds(states.answers_to_events(ser, "safe_open", "safe_close")) == [(8 * 1.001, "safe_open"), (12 * 1.001, "safe_close"),
+                                                                            (15 * 1.001, "safe_open"), (19 * 1.001, "safe_close")]

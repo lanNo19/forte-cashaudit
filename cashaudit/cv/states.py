@@ -24,7 +24,9 @@ from ..events import Event
 
 STATE_FPS = float(os.getenv("CV_STATE_FPS", "1"))
 STATE_HOLD = int(os.getenv("CV_STATE_HOLD", "2"))  # consecutive samples before a state change is believed
-STATE_GAP_SEC = 2.0  # unknown answers longer than this break a run (A100: "y???y" on X-31 made a false door_open)
+STATE_GAP_SEC = 2.5  # unknown answers longer than this break a run (A100: "y???y" on X-31 made a false door_open).
+# 2.5, not 2.0: samples sit at 29.97 fps frame times, so one unknown between two answers is a 2.002 s gap (A100 X-25:
+# "n?n" at 12.012/14.014 s lost the safe_close and kept the safe "open" until 19 s: false T04)
 STATE_KEY = os.getenv("CV_STATE_KEY", "0") == "1"  # the ~5 px key: A100 answers were noise, off by default
 STATE_BUDGET_SEC = float(os.getenv("CV_STATE_BUDGET_SEC", "60"))  # stop asking after this; the rest of the job needs time
 STATE_CONCURRENCY = int(os.getenv("CV_STATE_CONCURRENCY", os.getenv("VLM_CONCURRENCY", "4")))
