@@ -6,6 +6,8 @@
 #   eval <run>        all 42 clips through the running API, 5 in parallel; results in var/runs/<run>
 #   modes [tag]       ML lead's comparison: eval-local with VLM_MODE violations, events, both; packs ~/<tag>.tgz
 #                     (DEBUG_EVENTS=1 deploy/vm.sh modes <tag> also saves raw VLM events and candidates per clip)
+#   cut [--clap A_b=12.4]  long block recordings in var/own_long (A_a, A_b, B_a, B_b + takes.csv) -> one clip per take
+#                     and phone in var/own_raw, lined up by the sync clap (tools/cut_own.py)
 #   own [tag]         our own phone clips: var/own_raw/{OWN-xxa/b clips, shotlog.csv} -> jury format, one BOARD line per
 #                     phone (a, b), packed as ~/own-<tag>.tgz (tools/prepare_own.py explains the shot log)
 #   load              jury worst case: the largest clip uploaded 5 times at once; slowest must be < 240 s
@@ -50,6 +52,11 @@ case "${1:-status}" in
     tar czf ~/"$tag.tgz" -C var/runs "$tag" -C ~ "$tag-violations.log" "$tag-events.log" "$tag-both.log"
     echo; grep -H "^BOARD" ~/"$tag"-*.log || true
     echo "packed: ~/$tag.tgz  (laptop: gcloud compute scp test-vm-a100:~/$tag.tgz . --zone us-central1-f)"
+    ;;
+  cut)
+    shift
+    [ -f var/own_long/takes.csv ] || { echo "put A_a, A_b, B_a, B_b and takes.csv into var/own_long first"; exit 1; }
+    in_api "python3 tools/cut_own.py --src var/own_long --out var/own_raw $*"
     ;;
   own)
     tag=${2:-1}
