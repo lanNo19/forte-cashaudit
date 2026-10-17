@@ -8,7 +8,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 |---|---|---|---|---|
 | Jury API, auth, job queue, deadlines, watchdog | Platform | done | deploy behind a stable public URL | `make check`; `make eval-api … --parallel 5` |
 | Upload UI (RU) | Platform | done: #14A redesign (incident track, findings with legal basis, light/dark, mobile) | deploy after the cv8b run; #14B overlays if decided | open `/`, upload a clip |
-| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | working: load 5× X-14 slowest 157 s (CV + logprob verify), 5/5 no_violation | keep slowest < 240 s as CV/verify grow | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
+| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | working: load 5× X-14 slowest 157–171 s (CV + logprob verify, offline weights), 5/5 no_violation | keep slowest < 240 s as CV/verify grow | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
 | Public URL (stable across restarts) | Platform (Ablay + Claude) | done | – | https://34-171-142-215.sslip.io/healthz (Caddy + Let's Encrypt on static IP 34.171.142.215) |
 | GPU service image for the CV layer (`Dockerfile.gpu`, on the vLLM image) | Platform (Ablay + Claude) | experimental | build on the VM once CV needs torch: `API_DOCKERFILE=Dockerfile.gpu` | `docker compose build api` prints the torch version |
 | VLM client: scan, events, verify, scene | ML lead | experimental | run on the A100 (4B default, 8B to compare); compare `VLM_MODE` and `VLM_INPUT` | `deploy/vm.sh eval <run>` |
@@ -30,6 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 23:00 · Ablay + Claude · VM merged main, rebuilt, `vm.sh pin` (offline weights): load 5× X-14 slowest 171 s, all 5 no_violation, schema OK.
 - 2026-10-17 23:10 · Claude · #14C pixel cashier in the UI: 64×40 canvas at 2× on the upload box and the progress card; idle on the phone (breathing, scrolling, giggle, glance), "!" on drag-over, phone away on file chosen, bills counted with the real upload progress, a tiny dance, waiting with blinks/yawns/looks while analysing; hidden on results and errors; one still frame per state with reduced motion; no assets (drawn in-page). Tested in Chromium: every state, dark mode, reduced motion, no console errors.
 - 2026-10-17 22:50 · Ablay + Claude · combo1 (main + cv/states, logprob verify): `BOARD Video acc 30/42 · Missed 9/22 · False alarms 3/20 · Median |dt| 3.9 s · Type acc 7/13`; maxv1 (MAX_VIOLATIONS=1) same detection, |dt| 5.0 s. `tools/run_report.py <run> [--wrong]`: per clip label/VLM/CV scene, final violations with source and confidence, debug candidates split by likely path. Found: the pipeline keeps the VLM's scene for the scan's rule cards and the merged-log rules even when the CV scene guess overrules it (X-35..39).
 - 2026-10-17 21:55 · Claude · UI type scale up for demos (body 17 px, finding title 21, legal points 19, timecode 24, verdict 38); timeline marks closer than 5% stack in lanes so their numbers never overlap.
