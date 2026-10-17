@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
-# Amina's rerun of cv/states after the CV false-alarm fixes (cacaf11), 17 Oct. Needs the GPU image
-# (API_DOCKERFILE=Dockerfile.gpu) with origin/cv/states merged and the api rebuilt (--no-deps keeps vLLM up).
-# Run from the repo folder on the VM, in the background:
+# Amina's rerun of cv/states with the CV false-alarm fixes (cacaf11), 17 Oct evening. On the VM, from the repo folder,
+# after merging origin/cv/states:
 #   nohup deploy/experiments/cv8b.sh > ~/cv8b.out 2>&1 &      then: tail -f ~/cv8b.out
-# Output: ~/cv8b-runs.tgz (var/runs/cv2-* + logs) and the 4 BOARD lines + load result at the end of ~/cv8b.out.
+# It first waits for a running `deploy/vm.sh modes` run (rebuilding the api container would kill it), rebuilds the api
+# container only (vLLM keeps running), then: CV only and full pipeline on the originals and the shifted copies, load test.
+# Output: ~/cv8b-runs.tgz (var/runs/cv2-* + logs) and the BOARD lines at the end of ~/cv8b.out.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 LOGS=~/cv8b-logs; mkdir -p "$LOGS"
+PORT=$(grep -E '^API_PORT=' .env 2>/dev/null | cut -d= -f2); PORT=${PORT:-80}
 step() { echo; echo "== $(date +%H:%M:%S) $1"; }
 dc() { docker compose exec -T "$@"; }
 run() { local name=$1; shift; step "$name"; dc "$@" 2>&1 | tee "$LOGS/$name.log" | grep -E "^BOARD|Error|Traceback" ; }
 
-step "versions and code in the api container"
-dc api python3 -c "import torch, rfdetr; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
-git log --oneline -1 origin/cv/states; git merge-base --is-ancestor origin/cv/states HEAD && echo "cv/states fixes merged" \
-  || { echo "origin/cv/states is NOT merged into this checkout: merge it and rebuild the api first"; exit 1; }
+if pgrep -f "deploy/vm.sh modes" >/dev/null; then
+  step "waiting for the running deploy/vm.sh modes run to finish"
+  while pgrep -f "deploy/vm.sh modes" >/dev/null; do sleep 30; done
+fi
+
+step "code: $(git log --oneline -1)"
+git merge-base --is-ancestor origin/cv/states HEAD \
+  || { echo "origin/cv/states ($(git log --oneline -1 origin/cv/states)) is NOT merged here: git fetch origin, merge it, run again"; exit 1; }
+step "rebuild the api container (vLLM keeps running)"
+docker compose up -d --build --no-deps api 2>&1 | tail -2
+for _ in $(seq 1 90); do curl -s -m 3 "localhost:$PORT/healthz" 2>/dev/null | grep -q '"ok":true' && break; sleep 2; done
+dc api python3 -c "import torch, rfdetr, transformers; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), 'transformers', transformers.__version__)"
 
 if [ "$(ls var/shifted/*.mov 2>/dev/null | wc -l)" -lt 42 ]; then
   step "camera-shifted copies of the 42 clips"
@@ -33,8 +43,7 @@ for set in videos shifted; do
 done
 
 step "load test: largest clip x5 through the API, slowest must be < 240 s"
-deploy/vm.sh load 2>&1 | tee "$LOGS/load.log"
-rm -rf var/runs/cv2-load && cp -r var/runs/load var/runs/cv2-load
+LOAD_OUT=cv2-load deploy/vm.sh load 2>&1 | tee "$LOGS/load.log"
 
 tar czf ~/cv8b-runs.tgz var/runs/cv2-* -C ~ cv8b-logs
 step "BOARD lines"
