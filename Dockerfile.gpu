@@ -1,0 +1,29 @@
+# Service image WITH CUDA PyTorch, for when the CV layer runs inside the API (RF-DETR, DINOv2, trackers...).
+# Built on the vLLM image that is already on the VM: no extra download or disk, and torch/CUDA match vLLM's.
+# Use it with API_DOCKERFILE=Dockerfile.gpu in .env (docker-compose.yml passes VLLM_IMAGE as BASE).
+# The plain Dockerfile stays the default and the CI image.
+ARG BASE=vllm/vllm-openai:latest
+FROM ${BASE}
+
+ENV DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1 PYTHONUNBUFFERED=1 DATA_DIR=/app/var
+RUN command -v ffmpeg >/dev/null 2>&1 \
+ || (apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*)
+
+WORKDIR /app
+COPY requirements.txt requirements-gpu.txt ./
+# torch, numpy and opencv come from the base image; install the service's other deps without touching them.
+# vLLM images may ship pip or only uv, so use whichever exists.
+RUN if python3 -m pip --version >/dev/null 2>&1; then PIP="python3 -m pip install"; else PIP="uv pip install --system"; fi \
+ && grep -v -E '^(numpy|opencv)' requirements.txt > /tmp/req.txt \
+ && $PIP -r /tmp/req.txt \
+ && (python3 -c "import cv2" 2>/dev/null || $PIP opencv-python-headless) \
+ && $PIP -r requirements-gpu.txt \
+ && python3 -c "import torch, cv2, numpy, fastapi; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'cv2', cv2.__version__)"
+
+COPY cashaudit cashaudit
+COPY data data
+COPY tools tools
+EXPOSE 8000
+# the base image's entrypoint is `vllm serve`: replace it. ONE uvicorn process (the job queue lives in memory).
+ENTRYPOINT []
+CMD ["python3", "-m", "uvicorn", "cashaudit.api:app", "--host", "0.0.0.0", "--port", "8000"]

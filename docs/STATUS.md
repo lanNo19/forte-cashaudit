@@ -8,8 +8,9 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 |---|---|---|---|---|
 | Jury API, auth, job queue, deadlines, watchdog | Platform | done | deploy behind a stable public URL | `make check`; `make eval-api … --parallel 5` |
 | Upload UI (RU) | Platform | done | check on the GPU box in Chrome | open `/`, upload a clip |
-| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | experimental | session 1 setup: `docs/DEPLOY.md` | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
-| Public URL (stable across restarts) | Platform (Ablay + Claude) | todo | reserve the A100's IP as static before the first stop | URL unchanged after VM stop/start |
+| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | working | session 1 setup: `docs/DEPLOY.md` | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
+| Public URL (stable across restarts) | Platform (Ablay + Claude) | working | http://34.171.142.215/ (static IP); HTTPS via Caddy + 34-171-142-215.sslip.io next | URL unchanged after VM stop/start |
+| GPU service image for the CV layer (`Dockerfile.gpu`, on the vLLM image) | Platform (Ablay + Claude) | experimental | build on the VM once CV needs torch: `API_DOCKERFILE=Dockerfile.gpu` | `docker compose build api` prints the torch version |
 | VLM client: scan, events, verify, scene | ML lead | experimental | run on the A100 (4B default, 8B to compare); compare `VLM_MODE` and `VLM_INPUT` | `deploy/vm.sh eval <run>` |
 | Fusion + per-type floors + veto | ML lead | done (logic), numbers todo | `make calibrate` after the first real run | `tests/test_fusion.py` |
 | CV event layer (`EventExtractor`) | CV | placeholder | tracking + roles, ROI states (door, safe, key, screen), desk change | `tests/test_rules.py` shows the events each rule needs |
@@ -29,6 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 17:30 · Claude · A100 live: 42/42 answered, 0 schema errors, base-4b 22/42 (prompt bug, PR #12), load test 5×143 s slowest 81 s. `Dockerfile.gpu` (opt-in, on the vLLM image) for the CV layer.
 - 2026-10-17 16:30 · Claude · A100-only deploy with on/off sessions, Qwen3-VL-4B default (8B one switch away), `deploy/vm.sh` (prep, eval, load, pin, idle), `tools/prepare_videos.py` (zip has mixed Latin/Cyrillic names).
 - 2026-10-17 14:40 · Claude · deploy for 1 or 2 GPUs (compose profiles), Caddy option, `make load-test`, `docs/DEPLOY.md` (lab box + tunnel, GCP A100 backup with costs). Ablay moves to Platform.
 - 2026-10-17 14:10 · Claude · repo pushed to GitHub (private), CI green; labels and issues #1–#10 for sprints 1–2.
