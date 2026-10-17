@@ -1,0 +1,8 @@
+# Service (CPU). The pipeline's model dependencies (torch, detector, DINOv2...) go in requirements-gpu.txt.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+httpx==0.28.1
+numpy>=1.26,<3
+opencv-python-headless==4.10.0.84
+pytest==8.3.4

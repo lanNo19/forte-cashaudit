@@ -1,0 +1,33 @@
+# Videos and frames never go into git (the brief forbids keeping or publishing test videos)
+*.mov
+*.MOV
+*.mp4
+*.avi
+*.mkv
+*.m4v
+frames/
+shifted/
+
+# Runtime and results
+var/
+runs/
+*.zip
+
+# Secrets
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Model weights (download on the box)
+weights/
+*.pt
+*.pth
+*.onnx
+*.safetensors

@@ -1,0 +1,61 @@
+# One vLLM server per RTX 5090 (research: one server on "all" GPUs without tensor parallelism uses a single card).
+# Each worker thread of the API talks to its own server (VLM_BASE_URL is a comma-separated list).
+#
+# Image: Qwen3-VL needs vLLM >= 0.11 and Blackwell needs a CUDA 12.8+ build. Set VLLM_IMAGE in .env to the exact tag
+# you tested on the box (research: 0.31.0 was current on 5 Oct 2026; a forum thread reports 5090 crashes on 0.11.2).
+x-vlm: &vlm
+  image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+  environment:
+    # set to 1 once the weights are cached: the service then needs no internet (brief, section 7)
+    - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
+  volumes:
+    - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface
+  ipc: host
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python3", "-c", "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ['PORT'] + '/v1/models')"]
+    interval: 15s
+    timeout: 5s
+    retries: 40
+
+services:
+  vlm0:
+    <<: *vlm
+    environment:
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
+      - PORT=8001
+    command: >
+      --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
+      --port 8001 --max-model-len 32768 --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
+      --limit-mm-per-prompt '{"image": 40, "video": 1}'
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, device_ids: ["0"], capabilities: [gpu]}]
+
+  vlm1:
+    <<: *vlm
+    environment:
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
+      - PORT=8002
+    command: >
+      --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
+      --port 8002 --max-model-len 32768 --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
+      --limit-mm-per-prompt '{"image": 40, "video": 1}'
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, device_ids: ["1"], capabilities: [gpu]}]
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      - VLM_BASE_URL=http://vlm0:8001/v1,http://vlm1:8002/v1
+      - WORKERS=2
+    ports: ["8000:8000"]
+    volumes: ["./var:/app/var"]
+    depends_on:
+      vlm0: {condition: service_healthy}
+      vlm1: {condition: service_healthy}
+    restart: unless-stopped

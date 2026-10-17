@@ -1,0 +1,6 @@
+# Replace with the team's GitHub usernames once known, e.g.
+#   /cashaudit/api.py /cashaudit/jobs.py /cashaudit/static/ /Dockerfile /docker-compose.yml  @platform-username
+#   /cashaudit/analyzers/pipeline.py /cashaudit/rules.py                                    @cv-username
+#   /cashaudit/vlm.py /cashaudit/fusion.py /data/thresholds.json                            @ml-username
+#   /cashaudit/schema.py /cashaudit/events.py /cashaudit/analyzers/base.py /docs/INTERFACES.md  @lanNo19 @platform-username @cv-username
+*  @lanNo19
