@@ -4,7 +4,9 @@ One line per decision: date, decision, why, who. Newest first. Reverse a decisio
 
 | When | Decision | Why | Who |
 |---|---|---|---|
-| 2026-10-17 14:40 | Serve from the lab box through an outbound tunnel if it has outbound internet; GCP A100 only as a stopped backup, started on demand | GCP A100 ~$3.7/h; the brief gives no jury window; the lab firewall blocks only inbound (to confirm) | Ablay, Claude |
+| 2026-10-17 16:20 | Serve from one GCP A100 40 GB (a2-highgpu-1g), switched off between work sessions; teammates send code via PRs and Platform runs evals there | lab box unreachable and on slow internet; always-on A100 ~$95 to Sun 18:00 | Ablay |
+| 2026-10-17 16:20 | Default VLM Qwen3-VL-4B-Instruct (Apache-2.0, ~9 GB); 8B stays a one-line switch, ML lead compares both on the 42 clips | fits with room for CV and ~2× faster for the 5-minute jury limit; 4B vs 8B quality on our task not measured yet | Ablay |
+| 2026-10-17 14:40 | (replaced 16:20) Serve from the lab box through an outbound tunnel if it has outbound internet; GCP A100 only as a stopped backup, started on demand | GCP A100 ~$3.7/h; the brief gives no jury window; the lab firewall blocks only inbound (to confirm) | Ablay, Claude |
 | 2026-10-17 13:50 | VLM is a sensor: it reports events; `rules.py` decides violations (`VLM_MODE=events` favoured, `both` until measured) | Segment-then-judge beats direct error detection (ZeProM); code rules beat LLM judgement on rule-defined events (NSVS-TL) | research, team |
 | 2026-10-17 13:50 | Qwen3-VL-8B-Instruct, one vLLM server per RTX 5090 | Apache-2.0; better temporal grounding than Qwen2.5-VL-7B (48.3 vs 39.3 TimeLens); one server on "all" GPUs used one card | research |
 | 2026-10-17 13:50 | Small states (key, screen, safe, door) belong to CV ROI crops, not the VLM | a 5 px key is ~1/40 of a VLM token | research |

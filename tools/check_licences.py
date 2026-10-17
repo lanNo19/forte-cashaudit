@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCAN = ["cashaudit", "tools", "tests"]
-SCAN_FILES = ["Dockerfile", "docker-compose.yml", ".env.example", "Makefile"]
+SCAN_FILES = ["Dockerfile", "Dockerfile.gpu", "docker-compose.yml", ".env.example", "Makefile"]
 SCAN_GLOBS = ["requirements*.txt"]
 SKIP = {Path(__file__).resolve(), (ROOT / "tests" / "test_licences.py").resolve()}  # these name banned things on purpose
 

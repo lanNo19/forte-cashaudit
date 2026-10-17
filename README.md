@@ -36,17 +36,16 @@ test plumbing only, never deploy it.
 
 ## Deploy
 
-Step by step, with costs: [docs/DEPLOY.md](docs/DEPLOY.md). Lab box (2× RTX 5090) behind an outbound tunnel, or the
-GCP A100 as a paid backup.
+Step by step, with the on/off schedule and costs: [docs/DEPLOY.md](docs/DEPLOY.md). One GCP A100, run only during
+work sessions; `deploy/vm.sh` has the routine commands (prep, eval, load, pin, idle).
 
 ```bash
-cp .env.example .env       # API_KEYS, COMPOSE_PROFILES (2gpu on the lab box), API_PORT
+cp .env.example .env       # API_KEYS (deploy/vm.sh prep unpacks the clips)
 docker compose up -d --build
 make load-test URL=<public-url> KEY=<key> VIDEOS=…    # jury worst case: largest clip × 5 at once
 ```
 
-- Compose runs **one vLLM per GPU** (`vlm0`, plus `vlm1` with the `2gpu` profile); with one GPU both API workers share
-  one server.
+- Compose runs **one vLLM per GPU** (`vlm0`; `vlm1` with the `2gpu` profile); on the A100 both API workers share one.
 - Run **one** uvicorn process: the job queue is in memory. Scale with `WORKERS`.
 - The jury's 5-minute clock starts at upload, so queue time counts.
 - After the weights are cached set `HF_HUB_OFFLINE=1`: the brief requires no internet for processing.
