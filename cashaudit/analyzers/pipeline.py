@@ -11,6 +11,7 @@ warnings in meta, so the service never crashes while the pieces are being built.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -34,14 +35,38 @@ EVENT_SAMPLES = int(os.getenv("VLM_EVENT_SAMPLES", "1"))  # 3-5 = majority vote 
 
 
 class EventExtractor:
-    """PLACEHOLDER for the CV layer. Must return an EventLog for the sampled frames (see events.py)."""
+    """CV layer (cashaudit/cv): people -> person_enter/exit with roles + cashier_zone. Returns an EventLog.
+
+    `ready` only says the dependencies are installed (cheap check, no GPU work at start-up); the model loads on the
+    first video. Any CV failure returns an empty log and sets `error`, so the job still answers.
+    """
 
     def __init__(self, device: int = 0):
         self.device = device
-        self.ready = False  # set True once implemented
+        self.error: Optional[str] = None
+        self.info: dict = {}
+        self._cv = None
+        self.ready = os.getenv("CV_ENABLED", "1") == "1" and all(
+            importlib.util.find_spec(m) is not None for m in ("torch", "rfdetr"))
+        if not self.ready:
+            self.error = "CV disabled (CV_ENABLED=0)" if os.getenv("CV_ENABLED", "1") != "1" else "torch/rfdetr not installed"
 
     def extract(self, frames: List[Tuple[float, np.ndarray]], duration: float, scene: Optional[str] = None) -> EventLog:
-        return EventLog(events=[], duration=duration, scene=scene)
+        try:
+            if self._cv is None:
+                from ..cv.extractor import CVEventExtractor
+
+                cv = CVEventExtractor(self.device)
+                err = cv.load()
+                if err:
+                    raise RuntimeError(err)
+                self._cv = cv
+            log = self._cv.extract(frames, duration, scene)
+            self.error, self.info = None, self._cv.last_info
+            return log
+        except Exception as e:  # the CV layer must never fail the job
+            self.error = f"CV layer failed: {type(e).__name__}: {e}"
+            return EventLog(events=[], duration=duration, scene=scene)
 
 
 def _dedupe(events):
@@ -121,8 +146,11 @@ class PipelineAnalyzer:
             log.scene = log.scene or scene
             candidates += rules.run_rules(log)
             meta["n_events"] = len(log.events)
+            meta["cv"] = self.events.info
+            if self.events.error:
+                meta["warnings"].append(self.events.error)
         else:
-            meta["warnings"].append("event layer not implemented yet")
+            meta["warnings"].append(f"event layer off: {self.events.error}")
         meta["stages"]["events"] = round(time.time() - t0, 2)
         report(AnalysisResult(fuse(list(candidates)), dict(meta, partial=True)))
 

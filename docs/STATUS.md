@@ -12,7 +12,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 | Public URL (stable across restarts) | Platform (Ablay + Claude) | todo | reserve the A100's IP as static before the first stop | URL unchanged after VM stop/start |
 | VLM client: scan, events, verify, scene | ML lead | experimental | run on the A100 (4B default, 8B to compare); compare `VLM_MODE` and `VLM_INPUT` | `deploy/vm.sh eval <run>` |
 | Fusion + per-type floors + veto | ML lead | done (logic), numbers todo | `make calibrate` after the first real run | `tests/test_fusion.py` |
-| CV event layer (`EventExtractor`) | CV | placeholder | tracking + roles, ROI states (door, safe, key, screen), desk change | `tests/test_rules.py` shows the events each rule needs |
+| CV event layer: people (`cashaudit/cv/`) | CV (Amina) | working: T02 1/1, T10 1/1, 0 false alarms CV-only | auto ROIs per camera (#7), ROI states + desk change (#8) | `tests/test_cv_people.py`; `VLM_MODE=violations` eval |
 | Rules T01–T12, T14, T16, T17 | CV + ML lead | done on synthetic logs | feed real events; write T13, T15, T18–T20 | `tests/test_rules.py` |
 | Knowledge base: 20 types, 46 legal points | everyone | done | check the bank-secrecy article in the 2026 Law on Banks | `tests/test_kb.py` |
 | Eval: scoreboard, schema check, API/latency mode | everyone | done | – | `make eval-local` |
@@ -29,6 +29,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 17:30 · Amina + Claude · CV people layer (#6): RF-DETR Small persons at VLM_FPS, room-floor filter (corridor behind the glass), greedy tracker + door-aware stitching, clothing colour only to re-identify after gaps > 1 s, roles by time/behaviour, CV scene guess when the VLM has none, `cashier_zone`. `data/cameras.json` (hand-drawn for the training camera, normalized). CV-only eval (41/42 clips, X-48 cut by low memory): `BOARD Video acc 21/42 · Missed 20/22 · False alarms 0/20 · Median |dt| 0.7 s (≤2 s: 2/2) · Type acc 2/2`. RTX 3050: ~0.12 s/frame detect.
 - 2026-10-17 16:30 · Claude · A100-only deploy with on/off sessions, Qwen3-VL-4B default (8B one switch away), `deploy/vm.sh` (prep, eval, load, pin, idle), `tools/prepare_videos.py` (zip has mixed Latin/Cyrillic names).
 - 2026-10-17 14:40 · Claude · deploy for 1 or 2 GPUs (compose profiles), Caddy option, `make load-test`, `docs/DEPLOY.md` (lab box + tunnel, GCP A100 backup with costs). Ablay moves to Platform.
 - 2026-10-17 14:10 · Claude · repo pushed to GitHub (private), CI green; labels and issues #1–#10 for sprints 1–2.

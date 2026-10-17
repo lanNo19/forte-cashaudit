@@ -102,6 +102,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `data/rules_kb.json` | 20 types: `id, name, scene, cue, refs[{src, point, strength}], examples, clean, seen_in_train` | by PR; `tests/test_kb.py` guards it |
 | `data/legal_index.json` | 46 legal points with opening quote and summary; the only allowed citations | by PR; `tools/build_legal_index.py` can fill quotes |
 | `data/thresholds.json` | `{"floors": {"T09": 0.71}}` | ML lead via `tools/calibrate.py --write` |
+| `data/cameras.json` | per camera, normalized `[x, y]` polygons: `room_floor`, `door`, `zones.{A,B}.safe` | CV (hand-drawn now; #7 proposes them) |
 | `data/train_annotations.csv` | clip, file, scene, label, timecode, type | fixed (add own recordings as new rows) |
 | `data/train_md5.json` | hashes for the oracle | fixed |
 
@@ -128,3 +129,6 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `EVENTS_OWN` | (empty) | types where VLM-only candidates need `VLM_ALONE_CONF` |
 | `MAX_VIOLATIONS` | 5 | per video |
 | `KEEP_VIDEOS` | false | uploaded videos are deleted after analysis |
+| `CV_ENABLED` | 1 | 0 = skip the CV layer (it is also skipped when torch/rfdetr are missing) |
+| `CV_DETECTOR`, `CV_DET_THRESHOLD` | small, 0.3 | RF-DETR size (nano…large) and raw person threshold |
+| `CAMERA` | default | entry of `data/cameras.json` to use |
