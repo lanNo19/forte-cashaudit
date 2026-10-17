@@ -90,3 +90,25 @@ def test_cashier_leaves_through_the_door():  # X-26: zone desk -> door -> out
 def test_unknown_camera_falls_back_to_whole_frame(tmp_path):
     cam = load_camera("nope", path=tmp_path / "missing.json")
     assert isinstance(cam, Camera) and cam.in_room((0.5, 0.1)) and cam.near_door((0.01, 0.5))
+
+
+def test_duplicate_box_on_a_seated_person_is_not_a_newcomer():  # X-14 on the A100
+    seat = (0.45, 0.47)  # X-14: seated at the desk, away from the door
+    cashier = [seat] * 41
+    duplicate = [(seat[0] + 0.02, seat[1] + 0.01)] * 10  # second box on her, from 10 s
+    evs, _, info = people_events(clip(20, [(0, cashier), (10, duplicate)]), CAM, "B")
+    assert info["tracks"] == 1 and kinds(evs) == []
+
+
+def test_newcomer_first_seen_at_the_seat_is_kept():  # X-4: the client's door frames were missed
+    evs, _, _ = people_events(clip(20, [(0, [CASHIER_A] * 41), (5, [CLIENT_SEAT] * 31)]), CAM, "A")
+    assert kinds(evs) == [(5.0, "person_enter", "client")]
+
+
+def test_behaviour_overrules_a_wrong_scene():  # A100: the VLM called the session-5 client desk a cash room
+    cashier = [CASHIER_A] * 61
+    client = walk(DOOR, CLIENT_SEAT, 4) + [CLIENT_SEAT] * 60  # stays to the end
+    evs, scene, info = people_events(clip(30, [(0, cashier), (3, client)]), CAM, "B")
+    assert scene == "A" and info["scene_overruled"] == "B"
+    assert kinds(evs) == [(3.0, "person_enter", "client")]
+    assert run_rules(EventLog(evs, 30.0, scene)) == []  # no T02

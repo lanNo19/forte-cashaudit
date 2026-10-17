@@ -5,5 +5,5 @@ rfdetr==1.11.2            # Apache-2.0; Nano–Large only, NOT the [plus] extra
 # supervision==0.31.0     # MIT; ByteTrack, zones, annotators
 # trackers==2.6.1         # Apache-2.0
 # rtmlib==0.0.16          # Apache-2.0; RTMPose/RTMO via ONNX
-# transformers            # Apache-2.0; DINOv2, OWLv2, Grounding DINO 1.0, Florence-2
+transformers==5.20.1     # Apache-2.0; OWLv2 (ROI anchors, #7), DINOv2, Grounding DINO 1.0, Florence-2
 # sam2==1.1.0             # Apache-2.0
