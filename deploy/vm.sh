@@ -41,13 +41,13 @@ case "${1:-status}" in
     ;;
   eval)
     run=${2:?run name, e.g. base-4b}
-    in_api "python tools/eval.py --api http://localhost:8000 --key \"\${API_KEYS%%,*}\" --videos var/videos --out var/runs/$run --parallel ${PARALLEL:-5}"
+    in_api "python3 tools/eval.py --api http://localhost:8000 --key \"\${API_KEYS%%,*}\" --videos var/videos --out var/runs/$run --parallel ${PARALLEL:-5}"
     ;;
   modes)
     tag=${2:-first_run}
     for m in violations events both; do
       echo "== VLM_MODE=$m"
-      in_api "VLM_MODE=$m python tools/eval.py --local ${EVAL_ANALYZER:-pipeline} --videos var/videos --out var/runs/$tag/$m" 2>&1 | tee ~/"$tag-$m.log"
+      in_api "VLM_MODE=$m python3 tools/eval.py --local ${EVAL_ANALYZER:-pipeline} --videos var/videos --out var/runs/$tag/$m" 2>&1 | tee ~/"$tag-$m.log"
     done
     tar czf ~/"$tag.tgz" -C var/runs "$tag" -C ~ "$tag-violations.log" "$tag-events.log" "$tag-both.log"
     echo; grep -H "^BOARD" ~/"$tag"-*.log || true
@@ -70,7 +70,7 @@ case "${1:-status}" in
     echo; grep -H "^BOARD" ~/"own-$tag"-[ab].log; echo "packed: ~/own-$tag.tgz"
     ;;
   load)
-    in_api 'big=$(ls -S var/videos/*.mov | head -1); d=$(mktemp -d); for i in 1 2 3 4 5; do ln -s "$PWD/$big" "$d/worst-$i.mov"; done; echo "5 x $big"; python tools/eval.py --api http://localhost:8000 --key "${API_KEYS%%,*}" --files "$d"/*.mov --out var/runs/load --parallel 5; rm -rf "$d"'
+    in_api 'big=$(ls -S var/videos/*.mov | head -1); d=$(mktemp -d); for i in 1 2 3 4 5; do ln -s "$PWD/$big" "$d/worst-$i.mov"; done; echo "5 x $big"; python3 tools/eval.py --api http://localhost:8000 --key "${API_KEYS%%,*}" --files "$d"/*.mov --out var/runs/load --parallel 5; rm -rf "$d"'
     ;;
   logs)
     docker compose logs --since "${2:-15m}" api 2>&1 | grep -i -E "error|timeout|warn|traceback" | tail -60 || echo "no errors in the last ${2:-15m}"
