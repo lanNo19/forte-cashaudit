@@ -1,0 +1,8 @@
+# HTTPS in front of the API (compose profile "https"). DOMAIN comes from .env; its A record must point at the VM.
+# Caddy gets and renews a Let's Encrypt certificate by itself; ports 80 and 443 must be open in the GCP firewall.
+{$DOMAIN} {
+	request_body {
+		max_size 200MB
+	}
+	reverse_proxy api:8000
+}

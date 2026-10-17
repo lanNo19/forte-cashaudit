@@ -10,7 +10,7 @@ analyze(video_path: str, deadline: Deadline, report: Callable[[AnalysisResult], 
 ```
 - `deadline.remaining()` = seconds left until upload + `JOB_BUDGET_SEC` (270). Degrade (lower fps, skip verifier)
   when it is low. The watchdog answers at upload + `HARD_TIMEOUT_SEC` (290) with the latest `report(...)`.
-- Built once per worker: `make_analyzer(name, device=i)`; worker `i` should use GPU `i` and VLM server `i % n`.
+- Built once per worker: `make_analyzer(name, device=i)`; worker `i` should use GPU `i % <GPU count>` (one A100 = every worker on GPU 0) and VLM server `i % n`.
 - Implementations: `stub` (always no violation), `oracle` (training labels by file hash, TEST ONLY), `pipeline`.
 
 ## 2. Result types (`cashaudit/schema.py`)

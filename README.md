@@ -34,18 +34,21 @@ make calibrate PREDS=runs/try1                                    # per-type flo
 consistent with the list). `ANALYZER=oracle` answers training clips from the labels and must score 42/42: use it to
 test plumbing only, never deploy it.
 
-## Deploy on the GPU box (2× RTX 5090)
+## Deploy
+
+Step by step, with costs: [docs/DEPLOY.md](docs/DEPLOY.md). Lab box (2× RTX 5090) behind an outbound tunnel, or the
+GCP A100 as a paid backup.
 
 ```bash
-cp .env.example .env       # set API_KEYS (python3 -c "import secrets; print(secrets.token_urlsafe(32))") and VLLM_IMAGE
+cp .env.example .env       # API_KEYS, COMPOSE_PROFILES (2gpu on the lab box), API_PORT
 docker compose up -d --build
+make load-test URL=<public-url> KEY=<key> VIDEOS=…    # jury worst case: largest clip × 5 at once
 ```
 
-- Compose runs **one vLLM per GPU** (`vlm0`, `vlm1`) and the API with two workers, one per server.
+- Compose runs **one vLLM per GPU** (`vlm0`, plus `vlm1` with the `2gpu` profile); with one GPU both API workers share
+  one server.
 - Run **one** uvicorn process: the job queue is in memory. Scale with `WORKERS`.
-- The jury's 5-minute clock starts at upload, so queue time counts. Check with `make eval-api` (5 in parallel).
-- Public URL: a quick Cloudflare tunnel changes URL on every restart. Use a named tunnel, reserved domain or a
-  VPS reverse proxy so the URL you submit survives a reboot.
+- The jury's 5-minute clock starts at upload, so queue time counts.
 - After the weights are cached set `HF_HUB_OFFLINE=1`: the brief requires no internet for processing.
 - Uploaded videos are deleted after analysis (`KEEP_VIDEOS=false`).
 

@@ -34,8 +34,8 @@ legal grounding 15, robustness 10, product 10, technical soundness 10.
 
 | Area | Files | Owner | Contract it must honour |
 |---|---|---|---|
-| Jury API, job queue, deadlines, UI | `cashaudit/api.py`, `jobs.py`, `static/index.html` | Platform | Section 10 JSON; `Analyzer` protocol |
-| Deploy, GPU servers, public URL | `Dockerfile`, `docker-compose.yml`, `.env.example` | Platform | One vLLM per GPU; `VLM_BASE_URL` list |
+| Jury API, job queue, deadlines, UI | `cashaudit/api.py`, `jobs.py`, `static/index.html` | Platform (Ablay + Claude) | Section 10 JSON; `Analyzer` protocol |
+| Deploy, GPU servers, public URL | `Dockerfile`, `docker-compose.yml`, `.env.example`, `deploy/`, `docs/DEPLOY.md` | Platform (Ablay + Claude) | One vLLM per GPU; `VLM_BASE_URL` list |
 | CV event layer | `cashaudit/analyzers/pipeline.py` → `EventExtractor` (move it to `cashaudit/cv/` when it grows) | CV | Emits `EventLog` in the vocabulary of `events.py` |
 | Rule checks | `cashaudit/rules.py` | CV (states) + ML lead (procedure types) | One function per type id; reads only the event log |
 | VLM client and prompts | `cashaudit/vlm.py` | ML lead | Returns `Violation`s and `Event`s; times in video seconds |

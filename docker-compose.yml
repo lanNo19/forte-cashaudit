@@ -1,13 +1,16 @@
-# One vLLM server per RTX 5090 (research: one server on "all" GPUs without tensor parallelism uses a single card).
-# Each worker thread of the API talks to its own server (VLM_BASE_URL is a comma-separated list).
+# Deploy targets: lab box (2× RTX 5090) behind an outbound tunnel, or GCP a2-highgpu-1g (1× A100 40 GB) as backup.
+# Step-by-step: docs/DEPLOY.md.
 #
-# Image: Qwen3-VL needs vLLM >= 0.11 and Blackwell needs a CUDA 12.8+ build. Set VLLM_IMAGE in .env to the exact tag
-# you tested on the box (research: 0.31.0 was current on 5 Oct 2026; a forum thread reports 5090 crashes on 0.11.2).
+#   1 GPU (default): one vLLM server; the API's WORKERS share it (vLLM batches their requests).
+#   2 GPUs:          COMPOSE_PROFILES=2gpu and VLM_BASE_URL=http://vlm0:8001/v1,http://vlm1:8002/v1 in .env
+#                    (research: one server on "all" GPUs without tensor parallelism uses a single card).
+#   HTTPS:           add "https" to COMPOSE_PROFILES, set DOMAIN (its A record must point at the VM) and API_PORT=8000.
+#                    Without a domain: API_PORT=80 and the service is http://<static-ip>/.
+#
+# Image: Qwen3-VL needs vLLM >= 0.11. After the first successful start, pin VLLM_IMAGE to the digest you ran
+# (docs/DEPLOY.md, step 4) so a restart cannot pull a different version.
 x-vlm: &vlm
   image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
-  environment:
-    # set to 1 once the weights are cached: the service then needs no internet (brief, section 7)
-    - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
   volumes:
     - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface
   ipc: host
@@ -16,17 +19,20 @@ x-vlm: &vlm
     test: ["CMD", "python3", "-c", "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ['PORT'] + '/v1/models')"]
     interval: 15s
     timeout: 5s
-    retries: 40
+    retries: 60
 
 services:
   vlm0:
     <<: *vlm
     environment:
+      # set to 1 once the weights are cached: processing then needs no internet (brief, section 7)
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - PORT=8001
+    # A100 40 GB: 0.75 = ~30 GB (17.5 GB weights + ~10 GB KV cache, about 5 windows in flight); ~10 GB left for CV.
     command: >
       --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
-      --port 8001 --max-model-len 32768 --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
+      --port 8001 --max-model-len ${VLM_MAX_LEN:-16384} --max-num-seqs ${VLM_MAX_SEQS:-16}
+      --gpu-memory-utilization ${VLM_GPU_MEM:-0.75}
       --limit-mm-per-prompt '{"image": 40, "video": 1}'
     deploy:
       resources:
@@ -35,12 +41,14 @@ services:
 
   vlm1:
     <<: *vlm
+    profiles: ["2gpu"]
     environment:
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - PORT=8002
     command: >
       --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
-      --port 8002 --max-model-len 32768 --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
+      --port 8002 --max-model-len ${VLM_MAX_LEN:-16384} --max-num-seqs ${VLM_MAX_SEQS:-16}
+      --gpu-memory-utilization ${VLM_GPU_MEM:-0.75}
       --limit-mm-per-prompt '{"image": 40, "video": 1}'
     deploy:
       resources:
@@ -51,11 +59,31 @@ services:
     build: .
     env_file: .env
     environment:
-      - VLM_BASE_URL=http://vlm0:8001/v1,http://vlm1:8002/v1
-      - WORKERS=2
-    ports: ["8000:8000"]
+      - VLM_BASE_URL=${VLM_BASE_URL:-http://vlm0:8001/v1}
+      - WORKERS=${WORKERS:-2}
+    ports: ["${API_PORT:-8000}:8000"]
     volumes: ["./var:/app/var"]
+    # the CV layer runs in this container; worker i uses GPU i % (number of GPUs)
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
     depends_on:
       vlm0: {condition: service_healthy}
-      vlm1: {condition: service_healthy}
+      vlm1: {condition: service_healthy, required: false}
     restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8.4
+    profiles: ["https"]
+    environment:
+      - DOMAIN=${DOMAIN:-}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
