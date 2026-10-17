@@ -57,6 +57,12 @@ a { color: var(--steel); text-underline-offset: 2px; }
 .drop-hint { color: var(--muted); font-size: 15px; max-width: 60ch; }
 .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
+/* pixel cashier (#14C): 64x40 canvas at 2x, decorative */
+.cashier { display: block; width: 128px; height: 80px; image-rendering: crisp-edges; image-rendering: pixelated; }
+.drop .cashier { margin-bottom: 2px; }
+.work .cashier { justify-self: start; }
+@media (prefers-color-scheme: dark) { .cashier { background: #2f3a45; border-radius: 6px; padding: 4px 8px; } }
+
 /* processing */
 .work { background: var(--sheet); border-radius: 4px; padding: 24px; display: grid; gap: 14px; }
 .work-file { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
@@ -169,6 +175,7 @@ a { color: var(--steel); text-underline-offset: 2px; }
 
   <main>
     <label class="drop" id="drop">
+      <canvas class="cashier" id="cashier" width="64" height="40" aria-hidden="true"></canvas>
       <span class="drop-title">Перетащите видео сюда</span>
       <span class="drop-or">или</span>
       <span class="btn">Выбрать файл</span>
@@ -215,6 +222,342 @@ a { color: var(--steel); text-underline-offset: 2px; }
 </div>
 
 <script>
+/* Pixel cashier (#14C): a 64x40 pixel scene drawn on a canvas, shown at 2x. Decorative only (aria-hidden).
+   States follow the page: idle (on the phone) -> hover (file over the page) -> start (phone away) ->
+   upload (bills counted with the real upload progress) -> done (tiny dance) -> wait (analysing) -> hidden.
+   Idle life follows pixel-art idle practice: 1 px moves, long holds and short transitions, the head follows the
+   shoulders a beat later, the cowlick lags (follow-through), one-frame blinks at uneven intervals, rare fidgets.
+   prefers-reduced-motion: one still frame per state, no timers. */
+var Cashier = (function () {
+  "use strict";
+  var W = 64, H = 40, N = W * H;
+  var RGB = {
+    hair: [94, 60, 38], hairL: [128, 86, 54], skin: [243, 201, 162], skinS: [220, 164, 126], blush: [238, 150, 132],
+    eye: [31, 30, 43], shine: [255, 255, 255], mouth: [150, 70, 60], shirt: [246, 244, 239], shirtS: [206, 210, 220],
+    vest: [44, 79, 124], vestD: [31, 56, 88], vestL: [66, 104, 153], badge: [227, 166, 59],
+    wood: [196, 154, 108], woodL: [218, 180, 134], woodD: [154, 113, 72], woodDD: [122, 88, 56],
+    metal: [215, 221, 227], metalD: [170, 180, 189], metalDD: [128, 138, 148], slot: [45, 50, 60],
+    led: [46, 204, 113], ledOff: [60, 90, 70], ledDim: [40, 140, 80],
+    bill: [92, 174, 106], billD: [47, 122, 71], billL: [168, 220, 174], band: [227, 166, 59],
+    phone: [43, 47, 58], glow: [159, 227, 255], white: [255, 255, 255], red: [214, 60, 47], grey: [150, 150, 160]
+  };
+  var COL = {}, OUT = pack([31, 30, 43]);
+  function pack(c) { return ((255 << 24) | (c[0] << 16) | (c[1] << 8) | c[2]) >>> 0; }
+  Object.keys(RGB).forEach(function (k) { COL[k] = pack(RGB[k]); });
+
+  // ---- drawing primitives: a layer is a W*H array of packed colours, 0 = transparent
+  function layer() { return new Uint32Array(N); }
+  function px(L, x, y, c) { if (x >= 0 && x < W && y >= 0 && y < H) L[y * W + x] = COL[c]; }
+  function rect(L, x0, y0, x1, y1, c) { for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) px(L, x, y, c); }
+  function outline(L) {
+    var s = L.slice();
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var i = y * W + x;
+      if (s[i]) continue;
+      if ((x + 1 < W && s[i + 1]) || (x > 0 && s[i - 1]) || (y + 1 < H && s[i + W]) || (y > 0 && s[i - W])) L[i] = OUT;
+    }
+    return L;
+  }
+  function over(B, T) { for (var i = 0; i < N; i++) if (T[i]) B[i] = T[i]; return B; }
+  function rnd(v) { var f = Math.floor(v), d = v - f; return Math.abs(d - 0.5) < 1e-9 ? (f % 2 === 0 ? f : f + 1) : Math.round(v); }
+
+  // ---- the cashier
+  var SPANS = [6, 10, 12, 14, 14, 14, 14, 14, 14, 14, 14, 12, 8];
+  function head(o) {
+    var L = layer(), cx = o.cx, top = o.top, r, x, w, x0;
+    for (r = 0; r < SPANS.length; r++) { w = SPANS[r]; x0 = Math.floor(cx - w / 2 + 0.5); for (x = x0; x < x0 + w; x++) px(L, x, top + r, "skin"); }
+    var left = Math.floor(cx - 7 + 0.5);
+    for (r = 0; r < 4; r++) { w = SPANS[r]; x0 = Math.floor(cx - w / 2 + 0.5); for (x = x0; x < x0 + w; x++) px(L, x, top + r, "hair"); }
+    for (x = left + 3; x < left + 14; x++) px(L, x, top + 4, "hair");
+    for (x = left + 6; x < left + 14; x++) px(L, x, top + 5, "hair");
+    for (x = left + 11; x < left + 14; x++) px(L, x, top + 6, "hair");
+    px(L, left - 1, top + 7, "skin"); px(L, left - 1, top + 8, "skinS");
+    px(L, left + 14, top + 7, "skin"); px(L, left + 14, top + 8, "skinS");
+    for (r = 4; r < 8; r++) { px(L, left, top + r, "hair"); px(L, left + 13, top + r, "hair"); }
+    for (x = left + 3; x < left + 9; x++) px(L, x, top + 1, "hairL");
+    px(L, left + 4, top + 2, "hairL"); px(L, left + 5, top + 2, "hairL");
+    var ci = Math.floor(cx);
+    px(L, ci + 1, top - 1, "hair");                       // cowlick; lick -1 = tip springs up, +1 = droops
+    if (o.lick > 0) px(L, ci + 2, top - 1, "hair");
+    else { px(L, ci + 2, top - 2 + o.lick, "hair"); if (o.lick < 0) px(L, ci + 2, top - 2, "hair"); }
+    px(L, left + 1, top + 11, "skinS"); px(L, left + 12, top + 11, "skinS");
+    for (x = left + 3; x < left + 11; x++) px(L, x, top + 12, "skinS");
+    var eyes = o.eyes, look = o.look || 0, ey = top + 7;
+    var ex = eyes === "happy" ? [left + 2, left + 9] : [left + 3 + look, left + 9 + look];
+    ex.forEach(function (e) {
+      if (eyes === "open") { rect(L, e, ey, e + 1, ey + 1, "eye"); px(L, e, ey, "shine"); }
+      else if (eyes === "down" || eyes === "closed") rect(L, e, ey + 1, e + 1, ey + 1, "eye");
+      else if (eyes === "wide") { rect(L, e, ey - 1, e + 1, ey + 1, "eye"); px(L, e, ey - 1, "shine"); }
+      else if (eyes === "happy") { px(L, e, ey + 1, "eye"); px(L, e + 1, ey, "eye"); px(L, e + 2, ey + 1, "eye"); }
+      else if (eyes === "side") rect(L, e, ey, e + 1, ey + 1, "eye");
+    });
+    var by = eyes === "happy" ? ey + 3 : ey + 2;
+    px(L, left + 1, by, "blush"); px(L, left + 2, by, "blush"); px(L, left + 11, by, "blush"); px(L, left + 12, by, "blush");
+    var m = o.mouth;
+    if (m === "small") { px(L, ci, top + 10, "mouth"); px(L, ci + 1, top + 10, "mouth"); }
+    else if (m === "o") rect(L, ci, top + 10, ci + 1, top + 11, "mouth");
+    else if (m === "smile") { px(L, ci - 1, top + 10, "mouth"); px(L, ci, top + 11, "mouth"); px(L, ci + 1, top + 11, "mouth"); px(L, ci + 2, top + 10, "mouth"); }
+    else if (m === "yawn") rect(L, ci, top + 9, ci + 1, top + 11, "mouth");
+    else if (m === "flat") rect(L, ci - 1, top + 11, ci + 2, top + 11, "mouth");
+    return outline(L);
+  }
+  function torso(top, cx) {
+    var L = layer(), widths = [10, 14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16], r, x, w, x0, ci = Math.floor(cx);
+    for (r = 0; r < widths.length; r++) {
+      w = widths[r]; x0 = Math.floor(cx - w / 2 + 0.5);
+      for (x = x0; x < x0 + w; x++) px(L, x, top + r, r > 1 && x <= x0 + 1 ? "vestD" : r > 1 && x >= x0 + w - 2 ? "vestL" : "vest");
+    }
+    [6, 6, 4, 4, 2, 2].forEach(function (w, r) { var x0 = Math.floor(cx - w / 2 + 0.5); for (var x = x0; x < x0 + w; x++) px(L, x, top + r, "shirt"); });
+    px(L, ci - 3, top, "shirtS"); px(L, ci + 4, top, "shirtS");
+    rect(L, ci + 4, top + 4, ci + 5, top + 5, "badge");
+    rect(L, ci - 1, top - 1, ci + 2, top - 1, "skinS");
+    return outline(L);
+  }
+  function hand(x, y) { var L = layer(); rect(L, x, y, x + 2, y + 1, "skin"); return outline(L); }
+  function arm(x0, y0, x1, y1) {
+    var L = layer(), n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (var i = 0; i <= n; i++) { var x = rnd(x0 + (x1 - x0) * i / n), y = rnd(y0 + (y1 - y0) * i / n); rect(L, x, y, x + 1, y + 1, "vestD"); }
+    return outline(L);
+  }
+
+  // ---- props (desk and machine never change: drawn once)
+  var DESK = (function () {
+    var L = layer();
+    rect(L, 4, 27, 59, 28, "wood"); rect(L, 4, 27, 59, 27, "woodL"); rect(L, 5, 29, 58, 39, "woodD"); rect(L, 5, 29, 58, 29, "woodDD");
+    rect(L, 26, 33, 37, 33, "woodDD"); rect(L, 30, 35, 33, 35, "woodL");
+    return outline(L);
+  })();
+  var MACHINES = {};
+  function machine(led) {
+    if (!MACHINES[led]) {
+      var L = layer();
+      rect(L, 41, 19, 51, 26, "metal"); rect(L, 41, 23, 51, 26, "metalD"); rect(L, 43, 20, 49, 20, "slot");
+      rect(L, 48, 24, 50, 25, { off: "ledOff", on: "led", dim: "ledDim" }[led]); rect(L, 42, 24, 46, 24, "metalDD");
+      MACHINES[led] = outline(L);
+    }
+    return MACHINES[led];
+  }
+  function bill(x, y) { var L = layer(); rect(L, x, y, x + 6, y + 2, "bill"); rect(L, x, y + 2, x + 6, y + 2, "billD"); px(L, x + 3, y + 1, "billL"); return outline(L); }
+  function stack(n, x, w, banded, messy) {
+    var L = layer(), base = 26, i;
+    if (!n) return L;
+    for (i = 0; i < n; i++) { var dx = messy ? i % 2 : 0; rect(L, x + dx, base - i, x + dx + w - 1, base - i, i % 2 ? "bill" : "billD"); }
+    var tx = x + (messy ? (n - 1) % 2 : 0);
+    rect(L, tx, base - n + 1, tx + w - 1, base - n + 1, "billL");
+    if (banded) rect(L, x + Math.floor(w / 2) - 1, base - n + 1, x + Math.floor(w / 2), base, "band");
+    return outline(L);
+  }
+  function phone(x, y, tilt, scroll) {
+    var L = layer();
+    if (tilt) { rect(L, x, y, x + 5, y + 3, "phone"); rect(L, x + 1, y + 1, x + 4, y + 2, "glow"); }
+    else {
+      rect(L, x, y, x + 3, y + 5, "phone"); rect(L, x + 1, y + 1, x + 2, y + 4, "glow");
+      if (scroll != null) px(L, x + 1, y + 4 - (scroll % 4), "phone");
+    }
+    return outline(L);
+  }
+  function bang(x, y) { var L = layer(); rect(L, x, y, x + 5, y + 7, "white"); rect(L, x + 2, y + 1, x + 3, y + 4, "red"); rect(L, x + 2, y + 6, x + 3, y + 6, "red"); return outline(L); }
+  function dots(x, y, n) {
+    var L = layer(); rect(L, x, y, x + 10, y + 4, "white"); px(L, x - 2, y + 6, "white"); px(L, x - 1, y + 5, "white");
+    for (var i = 0; i < n; i++) px(L, x + 2 + i * 3, y + 2, "grey");
+    return outline(L);
+  }
+  function sweat(x, y) { var L = layer(); px(L, x, y, "glow"); rect(L, x - 1, y + 1, x + 1, y + 2, "glow"); return outline(L); }
+
+  // ---- one frame
+  function scene(k) {
+    var pose = k.pose, B = layer(), sway = k.sway || 0, dy = k.dy || 0, br = k.breath || 0, cx = 31.5 + sway;
+    var slouch = pose === "idle" || pose === "idle_b" || pose === "glance" || pose === "hover";
+    var f = { eyes: "open", mouth: "small", look: k.look || 0 };
+    if (slouch) f.eyes = "down";
+    if (pose === "glance") { f.eyes = "side"; f.look = -1; }
+    if (pose === "hover") f.eyes = "wide";
+    if (pose === "startle" || pose === "toss") { f.eyes = "wide"; f.mouth = "o"; }
+    if (pose === "dance_a" || pose === "dance_b") { f.eyes = "happy"; f.mouth = "smile"; }
+    if (pose === "creep") { f.eyes = "side"; f.look = 1; }
+    if (pose === "caught") { f.eyes = "wide"; f.mouth = "flat"; }
+    if (k.eyes) f.eyes = k.eyes;
+    if (k.mouth) f.mouth = k.mouth;
+    var sl = slouch ? 1 : 0;
+    over(B, torso(17 + dy + br + sl, cx));
+    over(B, head({ cx: cx, top: 5 + dy + (k.headb || 0) + sl, lick: k.lick || 0, eyes: f.eyes, mouth: f.mouth, look: f.look }));
+    if (pose === "toss") over(B, phone(34, 24, true));
+    over(B, DESK); over(B, machine(k.led || "off"));
+    if (k.n_pile) over(B, stack(k.n_pile, 8, 8, false, true));
+    if (k.n_brick) over(B, stack(k.n_brick, 53, 6, !!k.banded, false));
+    if (k.incoming != null) over(B, bill(k.incoming, 23));
+    var s = Math.trunc(sway), Lx = 24 + s, Rx = 39 + s, sy = 20 + dy + br;
+    if (slouch) {
+      var q = pose === "idle_b" ? 1 : 0;
+      over(B, arm(Lx, sy + 2, 27 + s, 23 + q)); over(B, arm(Rx, sy + 2, 35 + s, 23 + q));
+      over(B, phone(30 + s, 19 + q, false, k.scroll)); over(B, hand(27 + s, 23 + q)); over(B, hand(33 + s, 23 + q));
+      if (pose === "hover") over(B, bang(19, 1));
+    } else if (pose === "startle") {
+      over(B, arm(Lx, sy, 19, sy - 6)); over(B, arm(Rx, sy, 44, sy - 6)); over(B, hand(17, sy - 8)); over(B, hand(45, sy - 8));
+      over(B, phone(46, 2, true));
+    } else if (pose === "toss") {
+      over(B, arm(Lx, sy + 1, 26, 26)); over(B, arm(Rx, sy + 1, 36, 26)); over(B, hand(25, 26)); over(B, hand(35, 26));
+    } else if (pose === "upright" || pose === "wait" || pose === "caught" || pose === "dance_a") {
+      over(B, arm(Lx, sy + 1, 24 + s, 25)); over(B, arm(Rx, sy + 1, 38 + s, 25)); over(B, hand(23 + s, 25)); over(B, hand(37 + s, 25));
+    } else if (pose === "dance_b") {
+      over(B, arm(Lx, sy, 20 + s, sy - 3)); over(B, arm(Rx, sy, 42 + s, sy - 3)); over(B, hand(18 + s, sy - 5)); over(B, hand(42 + s, sy - 5));
+    } else if (pose === "creep") {
+      over(B, arm(Lx, sy + 1, 24, 25)); over(B, arm(Rx, sy + 1, 36, 30)); over(B, hand(23, 25)); over(B, hand(35, 31));
+    } else if (pose === "feed_a") {
+      over(B, arm(Lx, sy + 1, 16, 23)); over(B, arm(Rx, sy + 1, 38, 25)); over(B, bill(11, 21)); over(B, hand(14, 22)); over(B, hand(37, 25));
+    } else if (pose === "feed_b") {
+      over(B, arm(Lx, sy + 1, 26, 22)); over(B, arm(Rx, sy + 1, 36, 22)); over(B, bill(29, 20)); over(B, hand(27, 21)); over(B, hand(34, 21));
+    } else if (pose === "feed_c") {
+      over(B, arm(Lx, sy + 1, 24, 25)); over(B, arm(Rx, sy + 1, 41, 19)); over(B, bill(43, 17)); over(B, hand(41, 18)); over(B, hand(23, 25));
+    }
+    if (pose === "wait" && k.dots) over(B, dots(43, 5, k.dots));
+    if (pose === "caught") over(B, sweat(42, 9));
+    return B;
+  }
+
+  // ---- behaviour
+  var BREATH = [[0.90, 0, 0, 0], [0.15, 1, 0, 0], [0.17, 1, 1, -1], [0.55, 1, 1, 0], [0.15, 0, 1, 0], [0.17, 0, 0, 1]];
+  var PERIOD = BREATH.reduce(function (a, b) { return a + b[0]; }, 0);
+  function breath(t) {
+    t = ((t % PERIOD) + PERIOD) % PERIOD;
+    for (var i = 0; i < BREATH.length; i++) { if (t < BREATH[i][0]) return BREATH[i]; t -= BREATH[i][0]; }
+    return BREATH[0];
+  }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  var BILLS = 6, ARRIVE = [0.15, 0.4, 0.65], SLIDE = [-7, -3, 1, 5];
+
+  var canvas = null, ctx = null, img = null, state = "hidden", t0 = 0, raf = 0, lastKey = "", reduce = false;
+  var up, fid, blink;
+
+  function resetMemory() {
+    up = { p: 0, done: false, fed: 0, arrived: 0, cycle: -1, slide: -1 };
+    fid = { ev: null, next: rand(3, 6) };
+    blink = { at: rand(1.5, 4), dbl: false };
+  }
+
+  function idleFrame(t) {
+    var b = breath(t), k = { pose: "idle", breath: b[1], headb: b[2], lick: b[3], n_pile: 3 };
+    var e = fid.ev;
+    if (!e && t >= fid.next) { var kinds = ["read", "giggle", "glance"]; e = fid.ev = { kind: kinds[Math.floor(Math.random() * 3)], at: t }; e.dur = e.kind === "read" ? 1.3 : 0.8; }
+    if (e && t >= e.at + e.dur) { fid.ev = e = null; fid.next = t + rand(5, 10); }
+    var reading = e && e.kind === "read";
+    k.scroll = reading ? Math.floor(e.at / 0.32) : Math.floor(t / 0.32);
+    if (!reading && (t % 0.32) < 0.1) k.pose = "idle_b";
+    if (e && e.kind === "giggle") { k.eyes = "happy"; k.mouth = "smile"; k.dy = Math.floor((t - e.at) / 0.16) % 2 === 0 ? -1 : 0; }
+    if (e && e.kind === "glance") k.pose = "glance";
+    return k;
+  }
+
+  function uploadFrame(t) {
+    var b = breath(t), k = { pose: "upright", breath: b[1], headb: b[2], lick: b[3], led: "off" };
+    if (up.slide < 0 && up.arrived < ARRIVE.length && (up.done || up.p >= ARRIVE[up.arrived])) up.slide = t;
+    if (up.slide >= 0) {
+      var s = (t - up.slide) / 0.28;
+      if (s >= 1) { up.arrived++; up.slide = -1; } else k.incoming = SLIDE[Math.min(3, Math.floor(s * 4))];
+    }
+    var pile = 3 + up.arrived - up.fed, target = up.done ? BILLS : Math.floor(up.p * BILLS);
+    if (up.cycle < 0 && up.fed < target && pile > 0) up.cycle = t;
+    k.n_pile = pile; k.n_brick = up.fed * 2;
+    if (up.cycle >= 0) {
+      var c = t - up.cycle;
+      if (c >= 0.5) { up.fed++; up.cycle = -1; k.n_pile = 3 + up.arrived - up.fed; k.n_brick = up.fed * 2; }
+      else {
+        k.breath = k.headb = k.lick = 0; k.n_pile = pile - 1; k.led = "on";
+        k.pose = c < 0.17 ? "feed_a" : c < 0.31 ? "feed_b" : "feed_c";
+        if (k.pose === "feed_c") k.n_brick = (up.fed + 1) * 2;
+      }
+    }
+    if (up.done && up.fed >= BILLS && up.cycle < 0 && up.slide < 0) go("done");
+    return k;
+  }
+
+  function waitFrame(t) {
+    var b = breath(t + 0.4);
+    var k = { pose: "wait", breath: b[1], headb: b[2], lick: b[3], n_pile: 0, n_brick: BILLS * 2, banded: true,
+              dots: 1 + Math.floor(t / 0.42) % 3, led: (t % 2) < 0.3 ? "dim" : "off" };
+    if (t >= blink.at) {
+      var d = t - blink.at;
+      if (d < 0.11 || (blink.dbl && d >= 0.23 && d < 0.34)) k.eyes = "closed";
+      else if (d > (blink.dbl ? 0.34 : 0.11)) { blink.at = t + rand(2.5, 6); blink.dbl = Math.random() < 0.25; }
+    }
+    var e = fid.ev;
+    if (!e && t >= fid.next) { var kinds = ["look", "yawn", "creep"]; e = fid.ev = { kind: kinds[Math.floor(Math.random() * 3)], at: t }; e.dur = e.kind === "look" ? 0.9 : e.kind === "yawn" ? 1.1 : 1.6; }
+    if (e && t >= e.at + e.dur) { fid.ev = e = null; fid.next = t + rand(7, 12); }
+    if (e) {
+      var p = t - e.at;
+      if (e.kind === "look") { k.eyes = "side"; k.look = p < 0.45 ? -1 : 1; }
+      else if (e.kind === "yawn") { k.eyes = "closed"; k.mouth = "yawn"; k.breath = -1; k.headb = -1; k.lick = 1; k.dots = 0; }
+      else { k.pose = p < 0.7 ? "creep" : "caught"; k.dots = 0; }
+    }
+    return k;
+  }
+
+  function frame(t) {
+    switch (state) {
+      case "idle": return idleFrame(t);
+      case "hover": var b = breath(t); return { pose: "hover", breath: b[1], headb: b[2], lick: b[3], n_pile: 3 };
+      case "start":
+        if (t < 0.22) return { pose: "startle", dy: -2, n_pile: 3 };
+        if (t < 0.48) return { pose: "toss", n_pile: 3 };
+        go("upload"); return uploadFrame(0);
+      case "upload": return uploadFrame(t);
+      case "done":
+        if (t >= 0.88) { go("wait"); return waitFrame(0); }
+        return Math.floor(t / 0.22) % 2 === 0 ? { pose: "dance_a", sway: -1, n_brick: BILLS * 2, banded: true }
+                                               : { pose: "dance_b", sway: 1, dy: -1, n_brick: BILLS * 2, banded: true };
+      default: return waitFrame(t);
+    }
+  }
+  function still() {   // reduced motion: one calm frame per state
+    if (state === "idle") return { pose: "idle", n_pile: 3, scroll: 0 };
+    if (state === "hover") return { pose: "hover", n_pile: 3 };
+    if (state === "start" || state === "upload") return { pose: "upright", n_pile: 3, n_brick: 0 };
+    return { pose: "wait", n_brick: BILLS * 2, banded: true, dots: 3 };
+  }
+
+  function draw(k) {
+    var key = JSON.stringify(k);
+    if (key === lastKey) return;
+    lastKey = key;
+    var B = scene(k), d = img.data;
+    for (var i = 0; i < N; i++) {
+      var c = B[i], j = i * 4;
+      if (c) { d[j] = (c >>> 16) & 255; d[j + 1] = (c >>> 8) & 255; d[j + 2] = c & 255; d[j + 3] = 255; } else d[j + 3] = 0;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  function loop(now) {
+    raf = 0;
+    if (state === "hidden" || !canvas) return;
+    draw(frame((now - t0) / 1000));
+    raf = requestAnimationFrame(loop);
+  }
+  function go(s) { state = s; t0 = performance.now(); fid = { ev: null, next: rand(3, 6) }; }
+
+  return {
+    mount: function (el) {
+      canvas = el; ctx = el.getContext("2d"); img = ctx.createImageData(W, H);
+      try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { reduce = false; }
+      resetMemory();
+    },
+    set: function (s) {
+      if (!canvas || s === state) return;
+      if (s === "start" || s === "idle") resetMemory();
+      go(s);
+      if (s === "hidden") { if (raf) cancelAnimationFrame(raf); raf = 0; return; }
+      if (reduce) { draw(still()); return; }
+      if (!raf) raf = requestAnimationFrame(loop);
+    },
+    state: function () { return state; },
+    progress: function (p) { if (up) up.p = Math.max(up.p, Math.min(1, p)); },
+    uploaded: function () {
+      if (up) { up.p = 1; up.done = true; }
+      if (reduce && canvas && state !== "hidden") { state = "wait"; draw(still()); }   // no dance without motion
+    }
+  };
+})();
+</script>
+<script>
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
@@ -233,6 +576,10 @@ a { color: var(--steel); text-underline-offset: 2px; }
     $("drop").hidden = which !== "drop"; $("work").hidden = which !== "work";
     $("result").hidden = which !== "result"; $("error").hidden = which !== "error";
     $("again").hidden = which !== "result"; document.body.setAttribute("data-view", which);
+    var c = $("cashier");
+    if (which === "drop") { $("drop").insertBefore(c, $("drop").firstChild); Cashier.set("idle"); }
+    else if (which === "work") $("work").insertBefore(c, $("work").firstChild);
+    else Cashier.set("hidden");
   }
   function fail(title, text) { clearInterval(pollTimer); $("errTitle").textContent = title; $("errText").textContent = text; show("error"); }
 
@@ -244,17 +591,24 @@ a { color: var(--steel); text-underline-offset: 2px; }
     if (fileUrl) { URL.revokeObjectURL(fileUrl); fileUrl = null; }
     show("drop");
   }
+  Cashier.mount($("cashier")); Cashier.set("idle");
   $("again").addEventListener("click", reset);
   $("errAgain").addEventListener("click", reset);
 
   var drop = $("drop");
-  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
-  ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) {
+    e.preventDefault(); drop.classList.add("over"); if (Cashier.state() === "idle") Cashier.set("hover");
+  }); });
+  drop.addEventListener("dragleave", function (e) {
+    if (e.relatedTarget && drop.contains(e.relatedTarget)) return;   // moving over the drop zone's own children
+    drop.classList.remove("over"); if (Cashier.state() === "hover") Cashier.set("idle");
+  });
+  drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("over"); });
   drop.addEventListener("drop", function (e) { if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
   $("file").addEventListener("change", function () { if (this.files[0]) upload(this.files[0]); });
 
   function upload(file) {
-    reset(); show("work"); current = file;
+    reset(); show("work"); Cashier.set("start"); current = file;
     $("fname").textContent = file.name + ", " + (file.size / 1e6).toFixed(1) + " МБ";
     $("stageText").textContent = "Загрузка видео"; $("elapsed").textContent = "0%";
     $("stageNote").textContent = "Не закрывайте страницу до конца загрузки.";
@@ -266,13 +620,14 @@ a { color: var(--steel); text-underline-offset: 2px; }
     xhr.upload.onprogress = function (e) {
       if (!e.lengthComputable) return;
       var p = Math.round(100 * e.loaded / e.total); $("bar").style.width = p + "%"; $("elapsed").textContent = p + "%";
+      Cashier.progress(e.loaded / e.total);
     };
     xhr.onload = function () {
       var body = {}; try { body = JSON.parse(xhr.responseText); } catch (e) { /* not JSON: a proxy error page */ }
       if (xhr.status === 413) return fail("Файл слишком большой", "Можно загрузить видео до 300 МБ. Сократите запись или сожмите её и загрузите снова.");
       if (xhr.status === 400) return fail("Файл не похож на видео", "Загрузите запись в формате MOV или MP4. Если файл открывается в плеере, сохраните его заново и попробуйте ещё раз.");
       if (xhr.status !== 200 || !body.job_id) return fail("Сервер не принял файл", "Ответ сервера: " + (body.detail || xhr.status) + ". Загрузите видео ещё раз через минуту.");
-      t0 = Date.now(); poll(body.job_id);
+      t0 = Date.now(); Cashier.uploaded(); poll(body.job_id);
     };
     xhr.onerror = function () { fail("Нет связи с сервером", "Проверьте подключение к сети и загрузите видео снова."); };
     xhr.send(fd);
