@@ -28,8 +28,13 @@ ROI_MODEL = os.getenv("CV_ROI_MODEL", "google/owlv2-large-patch14-ensemble")
 REF_FILE = Path(__file__).resolve().parents[2] / "data" / "camera_ref.npz"
 N_FEATURES = 1500
 MIN_INLIERS = 40  # training clips match their session with 90+ inliers; a different room gets a handful
-QUERIES = {"safe": "a safe", "handle": "a door handle", "doorway": "an open doorway", "desk": "an office desk"}
-MIN_SCORE = {"safe": 0.15, "handle": 0.12, "doorway": 0.2, "desk": 0.3}
+QUERIES = {"safe": "a safe", "handle": "a door handle", "doorway": "an open doorway", "desk": "an office desk",
+           "laptop": "a laptop computer"}
+MIN_SCORE = {"safe": 0.15, "handle": 0.12, "doorway": 0.2, "desk": 0.3, "laptop": 0.25}
+# The safe is light-grey, unsaturated metal (training clips: HSV value 124-155, saturation 12-23). OWLv2 sometimes boxes
+# the black counting machine (X-23: V 56), the white drawer unit (X-28: V 168) or a coloured object as "a safe".
+SAFE_V = (110.0, 162.0)
+SAFE_S_MAX = 27.0
 
 # Fallback geometry (no registration), relative to the handle's right/bottom edge, scaled by desk width.
 REF_DESK_W = 0.57
@@ -38,6 +43,26 @@ DOOR_W = 0.30
 DOOR_Y = (0.035, 0.19)
 
 Box = Tuple[float, float, float, float]
+
+
+def plausible(name: str, box: Box, img: np.ndarray) -> bool:
+    """Checks for anchors OWLv2 tends to confuse: the safe must be a light box, not huge; the laptop not tiny."""
+    area = (box[2] - box[0]) * (box[3] - box[1])
+    if area <= 0:
+        return False
+    if name == "safe":
+        import cv2
+
+        h, w = img.shape[:2]
+        inner = img[int(box[1] * h):int(box[3] * h), int(box[0] * w):int(box[2] * w)]
+        if area >= 0.15 or inner.size == 0:
+            return False
+        hsv = cv2.cvtColor(inner, cv2.COLOR_BGR2HSV)
+        v, sat = float(hsv[..., 2].mean()), float(hsv[..., 1].mean())
+        return SAFE_V[0] <= v <= SAFE_V[1] and sat <= SAFE_S_MAX
+    if name == "laptop":
+        return area > 0.002  # not the desk phone
+    return True
 
 
 def _clip01(p):
@@ -194,7 +219,7 @@ class RoiProposer:
                 out = self.model(**inp)
             res = self.proc.post_process_grounded_object_detection(out, threshold=0.05, target_sizes=torch.tensor([[side, side]]))[0]
             for sc, lab, b in zip(res["scores"].tolist(), res["labels"].tolist(), res["boxes"].tolist()):
-                n = names[lab]
-                if sc >= MIN_SCORE[n] and sc > best.get(n, (0.0,))[0]:
-                    best[n] = (float(sc), (b[0] / w, b[1] / h, b[2] / w, b[3] / h))
+                n, nb = names[lab], (b[0] / w, b[1] / h, b[2] / w, b[3] / h)
+                if sc >= MIN_SCORE[n] and sc > best.get(n, (0.0,))[0] and plausible(n, nb, img):
+                    best[n] = (float(sc), nb)
         return best

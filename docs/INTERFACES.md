@@ -48,13 +48,13 @@ T00). Never write a legal reference by hand.
 | `handover` | `obj`: cash, id, cash_bag, doc, card; `extra.from`, `extra.to` | VLM (CV optional via hands) |
 | `object_placed`, `object_removed` | `obj`: cash, cash_bag, doc, tablet, handbag, coat, food, cup; `zone`: desk, safe | CV (desk change) + VLM |
 | `desk_clear` | – | CV |
-| `safe_open` / `safe_close` | – | CV (ROI state) |
-| `key_in_lock` / `key_removed` | – | CV (ROI crop, ~5 px key) |
-| `door_open` / `door_close` | – | CV (ROI state) |
+| `safe_open` / `safe_close` | – | CV (safe crop → local VLM, `cv/states.py`) |
+| `key_in_lock` / `key_removed` | – | CV (lock crop → local VLM; ~5 px key, weakest) |
+| `door_open` / `door_close` | – | CV (doorway crop → local VLM) |
 | `counting_start` / `counting_end` | `obj`: cash; `extra.device`: counter, hand, detector | CV for counter (ROI motion), VLM for hand/detector |
-| `screen_on` / `screen_locked` | `obj`: laptop | CV (ROI brightness) |
+| `screen_on` / `screen_locked` | `obj`: laptop | CV (laptop crop → local VLM) |
 | `consuming` | `actor`: cashier; `obj`: food, drink | VLM |
-| `lights_off` | – | CV (global brightness drop) |
+| `lights_off` | – | CV (global brightness held < 0.8 of the start) |
 
 VLM events carry `extra.source = "vlm"`. Overlapping windows are de-duplicated (same kind/obj/actor/zone within 3 s).
 
@@ -133,4 +133,5 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `CV_ENABLED` | 1 | 0 = skip the CV layer (it is also skipped when torch/rfdetr are missing) |
 | `CV_DETECTOR`, `CV_DET_THRESHOLD` | small, 0.3 | RF-DETR size (nano…large) and raw person threshold |
 | `CAMERA` | default | entry of `data/cameras.json` to use |
+| `CV_STATES`, `CV_STATE_FPS`, `CV_STATE_HOLD`, `CV_STATE_BUDGET_SEC`, `CV_STATE_CONCURRENCY` | 1, 1, 2, 60, `VLM_CONCURRENCY` | object states (#8): crops asked to the VLM per sampled second; a state must hold 2 samples; stop asking after 60 s |
 | `CV_ROI`, `CV_ROI_OWL`, `CV_ROI_MODEL` | 1, 1, google/owlv2-large-patch14-ensemble | per-video geometry: registration to the training camera, OWLv2 anchors (safe zone; door/floor when not registered) |

@@ -4,6 +4,7 @@ One line per decision: date, decision, why, who. Newest first. Reverse a decisio
 
 | When | Decision | Why | Who |
 |---|---|---|---|
+| 2026-10-17 21:00 | Object states (#8) by asking the local VLM about ROI crops, not DINOv2 probes; lights by brightness; desk change left to VLM events | 1-2 training clips per state would overfit a trained probe and not transfer to a new camera; the VLM needs no labels; the A100 runs it | Amina + Claude (CV) |
 | 2026-10-17 19:30 | Per-video geometry: ORB registration to one reference per recording session (points only, no images, in `data/camera_ref.npz`), hand-drawn polygons mapped through it; OWLv2-large anchors (safe, handle, doorway, desk) for the safe zone and for cameras that do not register; no SAM 2 | one global reference fails on the floor (parallax of a moved camera); OWLv2 handle/glass anchors alone were 1/2 on T02/T10; boxes are enough for zones | Amina + Claude (CV) |
 | 2026-10-17 17:30 | CV people: own greedy tracker + door-aware stitching instead of ByteTrack; room floor + door polygons per camera in `data/cameras.json`; clothing colour only after gaps > 1 s | at 2 fps people sitting down and corridor people behind the glass break plain tracking; pose changes colour too much to use it every frame | Amina + Claude (CV) |
 | 2026-10-17 16:20 | Serve from one GCP A100 40 GB (a2-highgpu-1g), switched off between work sessions; teammates send code via PRs and Platform runs evals there | lab box unreachable and on slow internet; always-on A100 ~$95 to Sun 18:00 | Ablay |
