@@ -67,7 +67,12 @@ services:
       - VLM_BASE_URL=${VLM_BASE_URL:-http://vlm0:8001/v1}
       - WORKERS=${WORKERS:-2}
     ports: ["${API_PORT:-8000}:8000"]
-    volumes: ["./var:/app/var"]
+    volumes:
+      - ./var:/app/var
+      # CV weights survive rebuilds and need no internet after the first download (brief, section 7):
+      # OWLv2 / DINOv2 via transformers share the vLLM container's Hugging Face cache; RF-DETR keeps its own.
+      - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface
+      - ./var/roboflow:/root/.roboflow
     # the CV layer runs in this container; worker i uses GPU i % (number of GPUs)
     deploy:
       resources:
