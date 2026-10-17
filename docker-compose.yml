@@ -1,8 +1,8 @@
 # Deploy target: GCP a2-highgpu-1g (1× A100 40 GB), switched off between work sessions to save money.
 # Step-by-step: docs/DEPLOY.md.
 #
-#   1 GPU (default): one vLLM server; the API's WORKERS share it (vLLM batches their requests).
-#   2 GPUs:          COMPOSE_PROFILES=2gpu and VLM_BASE_URL=http://vlm0:8001/v1,http://vlm1:8002/v1 in .env
+#   1 GPU (default): one vLLM server, WORKERS=1 (2 workers sharing it lost 5 videos under parallel load).
+#   2 GPUs:          COMPOSE_PROFILES=2gpu, WORKERS=2 and VLM_BASE_URL=http://vlm0:8001/v1,http://vlm1:8002/v1 in .env
 #                    (research: one server on "all" GPUs without tensor parallelism uses a single card).
 #   HTTPS:           add "https" to COMPOSE_PROFILES, set DOMAIN (its A record must point at the VM) and API_PORT=8000.
 #                    Without a domain: API_PORT=80 and the service is http://<static-ip>/.
@@ -65,7 +65,7 @@ services:
     env_file: .env
     environment:
       - VLM_BASE_URL=${VLM_BASE_URL:-http://vlm0:8001/v1}
-      - WORKERS=${WORKERS:-2}
+      - WORKERS=${WORKERS:-1}
     ports: ["${API_PORT:-8000}:8000"]
     volumes:
       - ./var:/app/var

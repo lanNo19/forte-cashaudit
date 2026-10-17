@@ -7,6 +7,7 @@
 Columns: clip, label scene, VLM scene (meta.scene_vlm, else meta.scene), CV scene (meta.cv.scene), label, final violations as
 type@second/source/confidence. Debug runs (DEBUG_EVENTS=1) also list the candidates before fusion; a candidate's
 confidence hints at its path: rules give at most 0.8 x event confidence, the VLM scan gives its own number (usually 0.9+).
+API runs (eval.py --api) have the jury JSON only: types are mapped back from their names, no source or confidence.
 Standard library only, so it runs on the VM host.
 """
 import argparse
@@ -25,6 +26,9 @@ def main() -> int:
     ap.add_argument("--wrong", action="store_true", help="only false alarms and misses")
     a = ap.parse_args()
     labels = {r["clip"]: r for r in csv.DictReader(open(a.labels, encoding="utf-8"))}
+    # API runs (the jury JSON) carry only the type name: map it back to the id
+    kb = json.loads((ROOT / "data/rules_kb.json").read_text(encoding="utf-8"))
+    by_name = {t["name"]: t["id"] for t in (kb["types"] if isinstance(kb, dict) else kb)}
     run = Path(a.run)
     files = sorted(run.glob("*.json"), key=lambda p: (len(p.stem), p.stem))
     files = [f for f in files if not f.stem.startswith("_") and f.stem not in ("scoreboard",)]
@@ -47,7 +51,8 @@ def main() -> int:
         if lab.get("scene") and vlm_s not in ("-", lab["scene"]):
             scene_bad += 1
         want = (lab.get("type_id") or "") + (f"@{lab['label_ts_sec']}" if lab.get("label_ts_sec") else "")
-        vs = " ".join(f"{v.get('type_id', '?')}@{v['timecode_sec']:.0f}/{v.get('source', '?')}/{v.get('confidence', 0):.2f}"
+        vs = " ".join(f"{v.get('type_id') or by_name.get(v.get('type'), 'T00')}@{v['timecode_sec']:.0f}"
+                      + (f"/{v['source']}/{v.get('confidence', 0):.2f}" if "source" in v else "")
                       for v in d.get("violations", []))
         mark = ("FA " if got == "violation" else "MISS ") if wrong else ""
         print(f"{f.stem:6} {lab.get('scene', '?'):3} {vlm_s:3} {cv_s:3}  {lab.get('label', '?'):12} {want:9} {mark}{vs}")
