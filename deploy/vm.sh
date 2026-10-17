@@ -54,6 +54,9 @@ case "${1:-status}" in
     ;;
   modes)
     tag=${2:-first_run}
+    # one evaluation run at a time: two runs with the same tag overwrite each other's results and logs
+    exec 9>"${TMPDIR:-/tmp}/cashaudit-modes.lock"
+    flock -n 9 || { echo "NOT STARTED: another 'deploy/vm.sh modes' run is still going (see: pgrep -af 'vm.sh modes')"; exit 1; }
     logs=()
     for m in ${MODES:-violations events both}; do
       echo "== VLM_MODE=$m"
