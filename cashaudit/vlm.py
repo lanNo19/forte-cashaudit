@@ -296,6 +296,9 @@ class VLMClient:
             f"Look at what happens around t={when:.1f}s. Is this rule actually broken there?\n"
             "Answer with exactly one word: yes or no."
         )
+        if v.type_id in ("T08", "T12"):
+            prompt = ("These frames show the visit from its start. Answer yes only if no identity document "
+                      "is shown to the cashier at any point in them.\n") + prompt
         body = {
             "model": self.model,
             "messages": [{"role": "system", "content": SYSTEM},
