@@ -12,6 +12,7 @@
   --ground: #e9edf0; --sheet: #ffffff; --ink: #17212b; --muted: #586572; --rule: #cdd4da;
   --signal: #b42318; --signal-wash: #fbe9e7; --clear: #1e6b45; --clear-wash: #e3f1e9;
   --steel: #24476b; --steel-wash: #dfe8f1; --screen: #0e1318; --on-signal: #ffffff;
+  --law: #8a4f00; --law-wash: #fff3da;
   --serif: "PT Serif", Georgia, "Times New Roman", serif;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "PT Sans", "Helvetica Neue", Arial, sans-serif;
 }
@@ -20,6 +21,7 @@
     --ground: #101519; --sheet: #182027; --ink: #e4e9ed; --muted: #97a3ae; --rule: #2c3740;
     --signal: #f2867b; --signal-wash: #3a1f1d; --clear: #62c495; --clear-wash: #18322a;
     --steel: #93b8dc; --steel-wash: #1e2c39; --screen: #000000; --on-signal: #1a0d0b;
+    --law: #f4c46a; --law-wash: #2a2314;
   }
 }
 * { box-sizing: border-box; }
@@ -110,12 +112,13 @@ a { color: var(--steel); text-underline-offset: 2px; }
 .tc { border: 0; background: none; padding: 0; color: var(--steel); font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .finding h3 { margin: 0 0 6px; font-size: 17px; line-height: 1.35; }
 .what { margin: 0 0 14px; max-width: 70ch; }
-.basis { margin: 0 0 16px; padding: 10px 14px; background: var(--ground); border-radius: 3px; font-size: 14px; max-width: 72ch; }
-.basis h4 { margin: 0 0 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
-.basis ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
-.basis b { font-variant-numeric: tabular-nums; }
-.basis .interp { color: var(--muted); font-style: italic; }
-.basis .act { display: inline-block; margin-top: 6px; font-size: 13px; }
+.basis { margin: 0 0 18px; padding: 14px 18px 4px; background: var(--law-wash); border-left: 5px solid var(--law); border-radius: 3px; max-width: 74ch; }
+.basis h4 { margin: 0 0 10px; font: 700 16px/1.3 var(--sans); color: var(--law); }
+.basis .act { display: block; font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--ink); text-decoration-color: var(--law); }
+.basis ul { margin: 4px 0 14px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.basis li { font-size: 16px; line-height: 1.45; }
+.basis li b { color: var(--law); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.basis .interp { display: inline-block; margin-left: 6px; padding: 0 7px; border: 1px solid var(--law); border-radius: 3px; font-size: 12px; line-height: 1.6; color: var(--law); white-space: nowrap; vertical-align: 1px; }
 .frames { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 560px; }
 .frame { position: relative; border: 0; padding: 0; background: var(--screen); border-radius: 3px; overflow: hidden; cursor: zoom-in; }
 .frame img { display: block; width: 100%; height: 100%; max-height: 300px; object-fit: contain; }
@@ -279,19 +282,23 @@ a { color: var(--steel); text-underline-offset: 2px; }
     $("stageText").textContent = "В очереди на анализ"; $("elapsed").textContent = "";
     $("stageNote").textContent = "Обычно анализ занимает 1–3 минуты, ответ приходит не позже чем через 5 минут после загрузки. Страницу можно не обновлять.";
     $("barWrap").classList.add("busy"); $("bar").style.width = "";
-    var misses = 0;
+    var misses = 0, busy = false, finished = false;
     pollTimer = setInterval(function () {
       $("elapsed").textContent = Math.round((Date.now() - t0) / 1000) + " с";
-      fetch("/ui/jobs/" + jobId, { cache: "no-store" }).then(function (r) {
+      if (busy || finished) return; busy = true;
+      var ctl = window.AbortController ? new AbortController() : null, tm = ctl && setTimeout(function () { ctl.abort(); }, 10000);
+      fetch("/ui/jobs/" + jobId, { cache: "no-store", signal: ctl ? ctl.signal : undefined }).then(function (r) {
+        clearTimeout(tm);
         if (r.status === 404) throw new Error("gone");
         return r.json();
       }).then(function (b) {
-        misses = 0;
-        if (b.status === "done") { clearInterval(pollTimer); render(b); }
-        else if (b.status === "failed") fail("Анализ не завершён", "Причина: " + (b.error || "ошибка анализа") + ". Загрузите видео ещё раз.");
+        busy = false; misses = 0; if (finished) return;
+        if (b.status === "done") { finished = true; clearInterval(pollTimer); render(b); }
+        else if (b.status === "failed") { finished = true; fail("Анализ не завершён", "Причина: " + (b.error || "ошибка анализа") + ". Загрузите видео ещё раз."); }
         else $("stageText").textContent = b.stage === "queued" ? "В очереди на анализ" : "Идёт анализ";
       }).catch(function (e) {
-        if (e && e.message === "gone") return fail("Проверка не найдена", "Сервис был перезапущен во время анализа. Загрузите видео ещё раз.");
+        busy = false; if (finished) return;
+        if (e && e.message === "gone") { finished = true; clearInterval(pollTimer); return fail("Проверка не найдена", "Сервис был перезапущен во время анализа. Загрузите видео ещё раз."); }
         if (++misses >= 20) fail("Нет связи с сервером", "Сервер не отвечает уже 30 секунд. Проверьте подключение и загрузите видео снова.");
       });
     }, 1500);
@@ -340,16 +347,17 @@ a { color: var(--steel); text-underline-offset: 2px; }
     var box = el("div", "basis"); box.appendChild(el("h4", null, "Основание"));
     var acts = []; refs.forEach(function (r) { var a = acts.filter(function (x) { return x.act === r.act; })[0]; if (!a) { a = { act: r.act, url: r.url, items: [] }; acts.push(a); } a.items.push(r); });
     acts.forEach(function (a) {
+      var link = el("a", "act", a.act); link.href = a.url; link.target = "_blank"; link.rel = "noopener";
+      link.title = "Открыть текст акта на adilet.zan.kz"; box.appendChild(link);
       var ul = el("ul");
       a.items.forEach(function (r) {
         var li = el("li"), m = /^(п\.\s*[\d.]+(?:\s*подп\.\s*\d+\)?)?)\s*(.*)$/.exec(r.point || "");
-        if (m) { li.appendChild(el("b", null, m[1])); li.appendChild(document.createTextNode(" " + m[2].replace(/^\(|\)$/g, ""))); }
+        if (m) { li.appendChild(el("b", null, m[1])); li.appendChild(document.createTextNode(m[2].replace(/^\(|\)$/g, ""))); }
         else li.appendChild(document.createTextNode(r.point || ""));
-        if (r.strength === "interpretive") { li.appendChild(document.createTextNode(" ")); li.appendChild(el("span", "interp", "по аналогии, требует толкования")); }
+        if (r.strength === "interpretive") { var t = el("span", "interp", "по аналогии"); t.title = "Прямой нормы нет, применяется по аналогии и требует толкования"; li.appendChild(t); }
         ul.appendChild(li);
       });
       box.appendChild(ul);
-      var link = el("a", "act", a.act); link.href = a.url; link.target = "_blank"; link.rel = "noopener"; box.appendChild(link);
     });
     return box;
   }
@@ -380,7 +388,7 @@ a { color: var(--steel); text-underline-offset: 2px; }
     };
     v.onerror = function () { $("vnote").hidden = false; };
 
-    var list = $("list"), wrap = $("listWrap");
+    var list = $("list"), wrap = $("listWrap"); list.innerHTML = "";
     wrap.querySelectorAll(".empty").forEach(function (n) { n.remove(); });
     list.hidden = !bad; $("trackNote").hidden = !bad;
     if (!bad) {
@@ -403,7 +411,7 @@ a { color: var(--steel); text-underline-offset: 2px; }
       else if ((x.description || "").indexOf("Основание:") >= 0) {
         var bb = el("div", "basis"); bb.appendChild(el("h4", null, "Основание"));
         bb.appendChild(el("p", null, x.description.slice(x.description.indexOf("Основание:") + 11).replace(/\s*Требуется проверка человеком\.?\s*$/, "")));
-        bb.lastChild.style.margin = "0"; body.appendChild(bb);
+        bb.lastChild.style.margin = "0 0 12px"; body.appendChild(bb);
       }
       var frames = el("div", "frames");
       (x.evidence_frames || []).forEach(function (fr) {
