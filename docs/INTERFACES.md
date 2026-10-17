@@ -34,6 +34,8 @@ T00). Never write a legal reference by hand.
 | `POST /ui/analyze`, `GET /ui/jobs/{id}` | no key (UI) | same + `type_id`, `confidence`, `source`, `refs`, `meta`, `elapsed_sec` |
 | `GET /healthz` | – | `{"ok", "queue", "workers", "jobs", "analyzer"}` |
 
+`meta.scene` is the scene the pipeline used; when the CV layer's behaviour guess disagrees with the VLM's scene, the CV scene wins and the VLM's answer is in `meta.scene_vlm` (UI/debug only, not in the jury JSON).
+
 401 without a valid key, 400 for a non-video, 413 above `MAX_UPLOAD_MB`, 404 for an unknown job.
 
 ## 4. Event log (`cashaudit/events.py`): the seam between CV, VLM and rules
@@ -62,10 +64,10 @@ VLM events carry `extra.source = "vlm"`. Overlapping windows are de-duplicated (
 
 | Type | Fires when | Events it needs | Timecode |
 |---|---|---|---|
-| T01 door not closed | cashier enters; door still open 6 s later, no `door_close` | `person_enter(cashier)`, `door_open/close` | entry |
+| T01 door not closed | cashier enters; door confirmed open 6–8 s later (states are ~1 fps), no `door_close` | `person_enter(cashier)`, `door_open/close` | entry |
 | T02 outsider in cash room | `person_enter(other)` in scene B while the cashier works | `person_enter`, `cashier_zone` | entry |
 | T03 valuables left | cashier exits with cash/cash_bag/doc/tablet on the desk | `person_exit(cashier)`, `object_placed/removed`, `desk_clear` | exit |
-| T04 safe left open | safe open and cashier back at the desk > 2 s | `safe_open/close`, `cashier_zone` | back at desk |
+| T04 safe left open | safe open, cashier seen at the safe, then back at the desk > 2 s | `safe_open/close`, `cashier_zone` | back at desk |
 | T05 key in lock | cashier exits while key is in the lock | `key_in_lock/removed`, `person_exit(cashier)` | exit |
 | T06 screen not locked | cashier exits with screen on (no lights_off) | `screen_on/locked`, `person_exit`, `cashier_zone` | gets up |
 | T07 end of day | lights off while screen on | `lights_off`, `screen_on`, `person_exit` | exit |

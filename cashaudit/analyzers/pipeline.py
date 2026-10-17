@@ -138,7 +138,6 @@ class PipelineAnalyzer:
                 scene = self.vlm.classify_scene(frames)
             except Exception as e:
                 meta["warnings"].append(f"scene question failed: {e}")
-        meta["scene"] = scene
 
         # Path B: CV event layer + rules (precise timecodes for states)
         t0 = time.time()
@@ -146,6 +145,11 @@ class PipelineAnalyzer:
         if self.events.ready:
             self.events.vlm = self.vlm if vlm_ok else None
             log = self.events.extract(frames, info.duration, scene)
+            if log.scene and log.scene != scene:
+                # CV's behaviour guess (cashier stays + visitors = A, cashier comes and goes = B) was never wrong on the
+                # 42 clips; the VLM called the session-5 client desk a cash room, which showed the scan the wrong rule
+                # cards (X-38: T02 at 32 s instead of T09 at 33 s). The CV scene drives everything after this point.
+                meta["scene_vlm"], scene = scene, log.scene
             log.scene = log.scene or scene
             candidates += rules.run_rules(log)
             meta["n_events"] = len(log.events)
@@ -154,6 +158,7 @@ class PipelineAnalyzer:
                 meta["warnings"].append(self.events.error)
         else:
             meta["warnings"].append(f"event layer off: {self.events.error}")
+        meta["scene"] = scene
         meta["stages"]["events"] = round(time.time() - t0, 2)
         report(AnalysisResult(fuse(list(candidates)), dict(meta, partial=True)))
 

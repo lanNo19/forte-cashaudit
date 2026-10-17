@@ -102,3 +102,17 @@ def test_descriptions_carry_citations():
     v = run_rules(log)[0]
     assert "№ 231" in v.description and "п. 19" in v.description
     assert v.refs and v.refs[0]["url"].startswith("https://adilet.zan.kz")
+
+
+def test_t01_door_confirmed_open_just_after_the_grace_time():  # A100 X-33: entry 5.5 s, door "yes" again from 12 s
+    log = EventLog([E(5.5, "person_enter", actor="cashier"), E(12.0, "door_open", zone="door")], duration=14.3, scene="B")
+    vs = run_rules(log)
+    assert types(vs) == ["T01"] and vs[0].timecode_sec == 5.5
+    late = EventLog([E(5.5, "person_enter", actor="cashier"), E(14.0, "door_open", zone="door")], duration=20, scene="B")
+    assert run_rules(late) == []  # opened again well after: not this entry's door
+
+
+def test_t04_needs_the_cashier_seen_at_the_safe():  # A100 X-25: safe opened, CV said "desk" the whole time
+    log = EventLog([E(0, "cashier_zone", zone="desk"), E(8, "safe_open", zone="safe"), E(14, "cashier_zone", zone="desk"),
+                    E(19, "safe_close", zone="safe")], duration=31.7, scene="B")
+    assert run_rules(log) == []
