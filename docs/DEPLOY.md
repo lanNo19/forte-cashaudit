@@ -24,10 +24,12 @@ for 4B on one A100: 1.5–2.5 min. Measure it with `deploy/vm.sh load` (pass: sl
 | 1 | Sat ~16:30 | ~19:00 | setup, first real run on 42 clips, load test, numbers on the board |
 | 2 | 20:30 | 22:30 | pull teammates' PRs (merged by 20:30), eval, calibrate; check-in 21:00 |
 | 3 | 00:30 | 03:00 | RC1 at 01:30, soak test, angle-shift set, machine image backup |
-| 4 | Sun 07:30 | jury done | RC2, 10:30 freeze, 11:00 load test from outside, 11:30 submit. **Never stop after submitting** |
+| 4 | Sun 07:30 | 13:30, or 17:00 if shortlisted | RC2, 10:30 freeze, 11:00 load test from outside, 11:30 submit. Jury run most likely 12:00–13:00 (agenda: coffee break before pitching). **Never stop before 13:30**; if we pitch, keep it up for a live demo until decisions (17:00) |
 
-About 17.5 h if the jury is done by Sun 18:00: ~$64 at $3.67/h (always on: ~$94). Stopped, it costs only the disk
-(~$0.67/day for 200 GB) and the reserved IP (~$0.24/day). Ask the organisers when the jury runs.
+Agenda: hackathon ends Sun 12:00, coffee break 12:00–13:00, pitching and decisions 13:00–17:00. The brief says the
+jury's API results choose who pitches, so the run is most likely 12:00–13:00. Total about 13 h (~$48) if we stop at
+13:30, about 16.5 h (~$61) if we pitch and keep it up to 17:00 (always on: ~$94). Stopped, it costs only the disk
+(~$0.67/day for 200 GB) and the reserved IP (~$0.24/day).
 
 Risk: a stopped A100 VM may not start again when the zone has no free A100s (`ZONE_RESOURCE_POOL_EXHAUSTED`). That is
 why session 4 starts at 07:30 and why session 3 ends with a machine image (see "Emergency").
