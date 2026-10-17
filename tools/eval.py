@@ -279,6 +279,7 @@ def main():
     ap.add_argument("--out", help="where to write predictions (default: --preds)")
     ap.add_argument("--clips", help="comma-separated subset, e.g. X-1,X-2,X-13")
     ap.add_argument("--no-dupes", action="store_true", help="drop X-47/X-48 (copies of X-4/X-5)")
+    ap.add_argument("--labels", help="annotations CSV (default data/train_annotations.csv), e.g. our own clips")
     ap.add_argument("--parallel", type=int, default=1, help="concurrent uploads in --api mode")
     args = ap.parse_args()
 
@@ -295,7 +296,7 @@ def main():
             print(f"  {Path(f).stem}: {'schema OK' if not errs else '; '.join(errs[:3])}")
         return
 
-    rows = load_annotations()
+    rows = load_annotations(Path(args.labels)) if args.labels else load_annotations()
     if args.clips:
         keep = set(args.clips.split(","))
         rows = [r for r in rows if r["clip"] in keep]
