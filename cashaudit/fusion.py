@@ -29,7 +29,7 @@ MAX_VIOLATIONS = int(os.getenv("MAX_VIOLATIONS", "5"))
 EVENTS_OWN = set(filter(None, os.getenv("EVENTS_OWN", "").split(",")))
 # Types the VLM can see well enough to veto an event-layer candidate.
 VETO_TYPES = set(filter(None, os.getenv("VETO_TYPES", "T02,T03,T08,T09,T10,T11,T12,T16,T17,T18,T19,T20").split(",")))
-VETO_BELOW = float(os.getenv("VETO_BELOW", "0.35"))
+VETO_BELOW = float(os.getenv("VETO_BELOW", "0.15"))
 THRESHOLDS_PATH = os.getenv("THRESHOLDS_PATH", str(ROOT / "data" / "thresholds.json"))
 
 Verifier = Callable[[Violation], Optional[float]]  # returns new confidence, or None when it could not check
@@ -76,7 +76,9 @@ def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floor
             new_conf = verifier(v)
             if new_conf is None:
                 checked.append(v)
-            elif v.source in ("events", "fused"):
+            elif v.source == "fused":
+                checked.append(v)  # CV and VLM both found it: never veto
+            elif v.source == "events":
                 if v.type_id in VETO_TYPES and new_conf < VETO_BELOW:
                     continue  # the VLM looked and clearly did not see it
                 checked.append(v)
