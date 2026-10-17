@@ -8,9 +8,9 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 |---|---|---|---|---|
 | Jury API, auth, job queue, deadlines, watchdog | Platform | done | deploy behind a stable public URL | `make check`; `make eval-api … --parallel 5` |
 | Upload UI (RU) | Platform | done | check on the GPU box in Chrome | open `/`, upload a clip |
-| Deploy: compose with 1 or 2 vLLM servers (`2gpu` profile), Caddy (`https` profile) | Platform (Ablay + Claude) | experimental | lab box + tunnel, or GCP A100 backup: `docs/DEPLOY.md` | `/healthz`; `make load-test` slowest < 240 s |
-| Public URL (stable across restarts) | Platform (Ablay + Claude) | todo | Tailscale Funnel from the lab box (needs outbound internet), else GCP static IP | URL survives `docker compose restart` |
-| VLM client: scan, events, verify, scene | ML lead | experimental | run on the real Qwen3-VL-8B; compare `VLM_MODE` and `VLM_INPUT` | `make eval-local` |
+| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | experimental | session 1 setup: `docs/DEPLOY.md` | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
+| Public URL (stable across restarts) | Platform (Ablay + Claude) | todo | reserve the A100's IP as static before the first stop | URL unchanged after VM stop/start |
+| VLM client: scan, events, verify, scene | ML lead | experimental | run on the A100 (4B default, 8B to compare); compare `VLM_MODE` and `VLM_INPUT` | `deploy/vm.sh eval <run>` |
 | Fusion + per-type floors + veto | ML lead | done (logic), numbers todo | `make calibrate` after the first real run | `tests/test_fusion.py` |
 | CV event layer (`EventExtractor`) | CV | placeholder | tracking + roles, ROI states (door, safe, key, screen), desk change | `tests/test_rules.py` shows the events each rule needs |
 | Rules T01–T12, T14, T16, T17 | CV + ML lead | done on synthetic logs | feed real events; write T13, T15, T18–T20 | `tests/test_rules.py` |
@@ -29,6 +29,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 16:30 · Claude · A100-only deploy with on/off sessions, Qwen3-VL-4B default (8B one switch away), `deploy/vm.sh` (prep, eval, load, pin, idle), `tools/prepare_videos.py` (zip has mixed Latin/Cyrillic names).
 - 2026-10-17 14:40 · Claude · deploy for 1 or 2 GPUs (compose profiles), Caddy option, `make load-test`, `docs/DEPLOY.md` (lab box + tunnel, GCP A100 backup with costs). Ablay moves to Platform.
 - 2026-10-17 14:10 · Claude · repo pushed to GitHub (private), CI green; labels and issues #1–#10 for sprints 1–2.
 - 2026-10-17 13:55 · Claude · VLM as event sensor (`VLM_MODE`), Qwen3-VL-8B default, one vLLM per GPU, scene filter,

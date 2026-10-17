@@ -1,4 +1,4 @@
-# Deploy targets: lab box (2× RTX 5090) behind an outbound tunnel, or GCP a2-highgpu-1g (1× A100 40 GB) as backup.
+# Deploy target: GCP a2-highgpu-1g (1× A100 40 GB), switched off between work sessions to save money.
 # Step-by-step: docs/DEPLOY.md.
 #
 #   1 GPU (default): one vLLM server; the API's WORKERS share it (vLLM batches their requests).
@@ -28,11 +28,11 @@ services:
       # set to 1 once the weights are cached: processing then needs no internet (brief, section 7)
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - PORT=8001
-    # A100 40 GB: 0.75 = ~30 GB (17.5 GB weights + ~10 GB KV cache, about 5 windows in flight); ~10 GB left for CV.
+    # A100 40 GB + Qwen3-VL-4B: 0.65 = ~26 GB (9 GB weights + ~16 GB KV cache, ~8 windows in flight); ~14 GB left for CV.
     command: >
-      --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
+      --model ${VLM_MODEL:-Qwen/Qwen3-VL-4B-Instruct}
       --port 8001 --max-model-len ${VLM_MAX_LEN:-16384} --max-num-seqs ${VLM_MAX_SEQS:-16}
-      --gpu-memory-utilization ${VLM_GPU_MEM:-0.75}
+      --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
       --limit-mm-per-prompt '{"image": 40, "video": 1}'
     deploy:
       resources:
@@ -46,9 +46,9 @@ services:
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - PORT=8002
     command: >
-      --model ${VLM_MODEL:-Qwen/Qwen3-VL-8B-Instruct}
+      --model ${VLM_MODEL:-Qwen/Qwen3-VL-4B-Instruct}
       --port 8002 --max-model-len ${VLM_MAX_LEN:-16384} --max-num-seqs ${VLM_MAX_SEQS:-16}
-      --gpu-memory-utilization ${VLM_GPU_MEM:-0.75}
+      --gpu-memory-utilization ${VLM_GPU_MEM:-0.65}
       --limit-mm-per-prompt '{"image": 40, "video": 1}'
     deploy:
       resources:

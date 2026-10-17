@@ -38,7 +38,7 @@ class Settings:
         # Comma-separated: one server per GPU. Worker i talks to URL i % n.
         self.vlm_base_urls = [u.strip() for u in os.getenv("VLM_BASE_URL", "http://127.0.0.1:8001/v1").split(",") if u.strip()]
         self.vlm_base_url = self.vlm_base_urls[0]
-        self.vlm_model = os.getenv("VLM_MODEL", "Qwen/Qwen3-VL-8B-Instruct")
+        self.vlm_model = os.getenv("VLM_MODEL", "Qwen/Qwen3-VL-4B-Instruct")
         self.vlm_timeout_sec = float(os.getenv("VLM_TIMEOUT_SEC", "60"))
         # What the VLM sees (research: 2-4 fps at native resolution; the old default was ~1 fps at 640 px)
         self.vlm_fps = float(os.getenv("VLM_FPS", "2"))

@@ -115,7 +115,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `JOB_BUDGET_SEC` / `HARD_TIMEOUT_SEC` | 270 / 290 | analyzer deadline / watchdog |
 | `API_EXTRA_FIELDS` | false | add type_id, confidence, refs to the jury JSON (keep false for the jury) |
 | `VLM_BASE_URL` | http://127.0.0.1:8001/v1 | comma-separated, one per GPU |
-| `VLM_MODEL` | Qwen/Qwen3-VL-8B-Instruct | served model name |
+| `VLM_MODEL` | Qwen/Qwen3-VL-4B-Instruct | served model name (8B: same family, compare with `deploy/vm.sh eval`) |
 | `VLM_FPS`, `VLM_MAX_SIDE`, `VLM_MAX_FRAMES` | 2, 0 (native), 32 | what the VLM sees per 16 s window |
 | `VLM_WINDOW_SEC`, `VLM_STRIDE_SEC` | 16, 8 | sliding windows |
 | `VLM_CONCURRENCY` | 4 | windows in flight per video |
