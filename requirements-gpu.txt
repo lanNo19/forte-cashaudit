@@ -1,7 +1,7 @@
 # GPU-side dependencies for the CV layer. Install on the box: pip install -r requirements.txt -r requirements-gpu.txt
 # Every line must be Apache-2.0 / MIT / BSD (tools/check_licences.py runs in CI). Uncomment what you use and pin it.
 # torch and torchvision: install the CUDA 12.8+ build that matches the RTX 5090 (Blackwell)
-# rfdetr==1.11.2          # Apache-2.0; Nano–Large only, NOT the [plus] extra
+rfdetr==1.11.2            # Apache-2.0; Nano–Large only, NOT the [plus] extra
 # supervision==0.31.0     # MIT; ByteTrack, zones, annotators
 # trackers==2.6.1         # Apache-2.0
 # rtmlib==0.0.16          # Apache-2.0; RTMPose/RTMO via ONNX

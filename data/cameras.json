@@ -1,0 +1,10 @@
+{
+  "_doc": "Normalized [x, y] polygons (fractions of width/height). room_floor: where feet of people inside the room are; door: where people enter/leave; zones: per scene layout (A client desk, B cash room). See cashaudit/cv/camera.py. Issue #7 replaces hand-drawn entries with proposed ones.",
+  "default": {
+    "room_floor": [[0.0, 0.445], [0.36, 0.445], [0.38, 0.41], [0.5, 0.37], [0.62, 0.3], [1.0, 0.3], [1.0, 1.0], [0.0, 1.0]],
+    "door": [[0.0, 0.38], [0.3, 0.38], [0.3, 0.52], [0.0, 0.56]],
+    "zones": {
+      "B": {"safe": [[0.43, 0.36], [0.7, 0.36], [0.7, 0.52], [0.43, 0.52]]}
+    }
+  }
+}

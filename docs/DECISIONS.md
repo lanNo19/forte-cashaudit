@@ -4,6 +4,7 @@ One line per decision: date, decision, why, who. Newest first. Reverse a decisio
 
 | When | Decision | Why | Who |
 |---|---|---|---|
+| 2026-10-17 17:30 | CV people: own greedy tracker + door-aware stitching instead of ByteTrack; room floor + door polygons per camera in `data/cameras.json`; clothing colour only after gaps > 1 s | at 2 fps people sitting down and corridor people behind the glass break plain tracking; pose changes colour too much to use it every frame | Amina + Claude (CV) |
 | 2026-10-17 16:20 | Serve from one GCP A100 40 GB (a2-highgpu-1g), switched off between work sessions; teammates send code via PRs and Platform runs evals there | lab box unreachable and on slow internet; always-on A100 ~$95 to Sun 18:00 | Ablay |
 | 2026-10-17 16:20 | Default VLM Qwen3-VL-4B-Instruct (Apache-2.0, ~9 GB); 8B stays a one-line switch, ML lead compares both on the 42 clips | fits with room for CV and ~2× faster for the 5-minute jury limit; 4B vs 8B quality on our task not measured yet | Ablay |
 | 2026-10-17 14:40 | (replaced 16:20) Serve from the lab box through an outbound tunnel if it has outbound internet; GCP A100 only as a stopped backup, started on demand | GCP A100 ~$3.7/h; the brief gives no jury window; the lab firewall blocks only inbound (to confirm) | Ablay, Claude |
