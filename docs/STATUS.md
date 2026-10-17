@@ -8,7 +8,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 |---|---|---|---|---|
 | Jury API, auth, job queue, deadlines, watchdog | Platform | done | deploy behind a stable public URL | `make check`; `make eval-api … --parallel 5` |
 | Upload UI (RU) | Platform | done | check on the GPU box in Chrome | open `/`, upload a clip |
-| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | working | session 1 setup: `docs/DEPLOY.md` | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
+| Deploy: GCP A100, compose, Qwen3-VL-4B default, on/off sessions | Platform (Ablay + Claude) | working: load 5× slowest 177 s with CV | keep slowest < 240 s as CV/verify grow | `deploy/vm.sh status`; `deploy/vm.sh load` slowest < 240 s |
 | Public URL (stable across restarts) | Platform (Ablay + Claude) | done | – | https://34-171-142-215.sslip.io/healthz (Caddy + Let's Encrypt on static IP 34.171.142.215) |
 | GPU service image for the CV layer (`Dockerfile.gpu`, on the vLLM image) | Platform (Ablay + Claude) | experimental | build on the VM once CV needs torch: `API_DOCKERFILE=Dockerfile.gpu` | `docker compose build api` prints the torch version |
 | VLM client: scan, events, verify, scene | ML lead | experimental | run on the A100 (4B default, 8B to compare); compare `VLM_MODE` and `VLM_INPUT` | `deploy/vm.sh eval <run>` |
@@ -30,7 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
-- 2026-10-17 21:40 · Claude · `deploy/vm.sh`: `eval`/`load` wait for `/healthz` (the load test after a rebuild failed in 0.2 s because the API was still starting), `VERIFY_*` and `MAX_VIOLATIONS` reach the eval process, `MODES=both deploy/vm.sh modes <tag>` runs one mode; `eval.py --api` prints the error of a failed job.
+- 2026-10-17 20:10 · Ablay + Claude · VM on cv/states + PR #17 (GPU image, CV on): load test 5× X-14 slowest 177 s (< 240 s, was 81 s without CV), schema OK; X-14 is clean but 1 of 5 identical uploads said violation (verdict not stable under load). `deploy/vm.sh`: `eval`/`load` wait for `/healthz` (the load test after a rebuild failed in 0.2 s because the API was still starting), `VERIFY_*` and `MAX_VIOLATIONS` reach the eval process, `MODES=both deploy/vm.sh modes <tag>` runs one mode; `eval.py --api` prints the error of a failed job.
 - 2026-10-17 21:15 · Amina + Claude · datasets re-checked (`docs/RESEARCH.md`): MEVA and KZ-BD confirmed CC BY 4.0; DeepDoors2 licence unclear; no public safe/lock-screen data. External data = test material only; own oblique clips (#9) remain the best new data.
 - 2026-10-17 17:30 · Amina + Claude · CV people layer (#6): RF-DETR Small persons at VLM_FPS, room-floor filter (corridor behind the glass), greedy tracker + door-aware stitching, clothing colour only to re-identify after gaps > 1 s, roles by time/behaviour, CV scene guess when the VLM has none, `cashier_zone`. `data/cameras.json` (hand-drawn for the training camera, normalized). CV-only eval (42 clips): `BOARD Video acc 22/42 · Missed 20/22 · False alarms 0/20 · Median |dt| 0.7 s (≤2 s: 2/2) · Type acc 2/2 · Unanswered 0 · Schema errors 0`. RTX 3050: ~0.12 s/frame detect.
 - 2026-10-17 17:30 · Claude · A100 live: 42/42 answered, 0 schema errors, base-4b 22/42 (prompt bug, PR #12), load test 5×143 s slowest 81 s. `Dockerfile.gpu` (opt-in, on the vLLM image) for the CV layer.
