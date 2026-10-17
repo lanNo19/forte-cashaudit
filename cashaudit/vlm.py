@@ -191,8 +191,9 @@ class VLMClient:
             f"{self._time_hint(frames)}\n"
             f"Rules (id: name. visual cue):\n{_rule_cards(ids)}\n\n"
             "Return JSON only, no prose:\n"
-            '{"violations": [{"type_id": "T09", "t": 7.0, "observed": "1-2 sentences in Russian: exactly what is visible", '
-            '"confidence": 0.0}]}\n'
+            '{"violations": [{"type_id": "<rule id from the list>", "t": <seconds, read from the timestamp on the frame>, '
+            '"observed": "<1-2 sentences in Russian: exactly what is visible>", "confidence": <0..1>}]}\n'
+            'If no rule is clearly broken, return {"violations": []}.\n'
             "t = when the rule is first broken. confidence: 0.9+ only if it is unambiguous."
         )
         data = _extract_json(self.chat(frames, prompt))
