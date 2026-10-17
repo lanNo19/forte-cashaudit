@@ -143,7 +143,22 @@ def propose(found: Dict[str, Tuple[float, Box]], base: Optional[Camera] = None) 
     handle, desk = found.get("handle"), found.get("desk")
     if not handle or not desk:
         info["fallback"] = "no handle" if not handle else "no desk"
-        return base, info
+        if not found:
+            return base, info  # nothing seen at all (OWLv2 off or failed): keep the configured camera
+        # The camera did not register, so the training room's polygons mean nothing here (MEVA stairwell: they cut the
+        # floor and misplaced the door). Generic: the whole frame is the room, the door is the floor strip at the bottom
+        # of the doorway box (frame border without one), the safe zone from the safe box.
+        door = None
+        if found.get("doorway"):
+            x1, y1, x2, y2 = found["doorway"][1]
+            dh = y2 - y1
+            door = [_clip01(p) for p in [(x1, y2 - 0.15 * dh), (x2, y2 - 0.15 * dh), (x2, y2 + 0.08), (x1, y2 + 0.08)]]
+        zones = {}
+        if found.get("safe"):
+            z = safe_zone(found["safe"][1])
+            zones = {"A": {"safe": z}, "B": {"safe": z}}
+        info["fallback"] += ", generic geometry"
+        return Camera(name="generic", room_floor=None, door=door, zones=zones), info
     hx, hy = handle[1][2], handle[1][3]
     s = float(min(2.0, max(0.5, (desk[1][2] - desk[1][0]) / REF_DESK_W)))
     room = [_clip01((hx + dx * s, hy + dy * s)) for dx, dy in FLOOR_LINE] + [(1.0, 1.0), (0.0, 1.0)]

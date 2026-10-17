@@ -78,7 +78,15 @@ def test_unregistered_camera_is_placed_from_handle_and_desk():
     assert not cam.in_room((0.3, 0.25)) and cam.in_room((0.5, 0.7))  # above the glass line / on the floor
 
 
-def test_missing_anchors_keep_the_base_camera():
+def test_nothing_found_keeps_the_base_camera():
     base = load_camera("default")
-    cam, info = roi.propose({"desk": (0.5, (0.1, 0.4, 0.6, 0.6))}, base)
+    cam, info = roi.propose({}, base)
     assert cam is base and info["fallback"] == "no handle"
+
+
+def test_unregistered_camera_without_desk_gets_generic_geometry():  # MEVA stairwell: door seen, no desk
+    base = load_camera("default")
+    cam, info = roi.propose({"doorway": (0.6, (0.35, 0.05, 0.6, 0.75)), "handle": (0.2, (0.36, 0.4, 0.38, 0.42))}, base)
+    assert cam.name == "generic" and "generic" in info["fallback"]
+    assert cam.in_room((0.5, 0.2)) and cam.in_room((0.1, 0.9))  # the whole frame counts
+    assert cam.near_door((0.47, 0.74)) and not cam.near_door((0.47, 0.3))  # floor strip under the doorway
