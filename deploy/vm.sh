@@ -4,6 +4,7 @@
 #   status            containers, /healthz, GPU memory
 #   prep <open.zip>   unpack the training clips into var/videos (names as eval.py expects, checksums checked)
 #   eval <run>        all 42 clips through the running API, 5 in parallel; results in var/runs/<run>
+#   modes [tag]       ML lead's comparison: eval-local with VLM_MODE violations, events, both; packs ~/<tag>.tgz
 #   load              jury worst case: the largest clip uploaded 5 times at once; slowest must be < 240 s
 #   logs [15m]        errors, timeouts and warnings from the API log
 #   pin               freeze the vLLM image to the digest that is running, switch to offline weights, restart
@@ -29,6 +30,16 @@ case "${1:-status}" in
   eval)
     run=${2:?run name, e.g. base-4b}
     in_api "python tools/eval.py --api http://localhost:8000 --key \"\${API_KEYS%%,*}\" --videos var/videos --out var/runs/$run --parallel ${PARALLEL:-5}"
+    ;;
+  modes)
+    tag=${2:-first_run}
+    for m in violations events both; do
+      echo "== VLM_MODE=$m"
+      in_api "VLM_MODE=$m python tools/eval.py --local ${EVAL_ANALYZER:-pipeline} --videos var/videos --out var/runs/$tag/$m" 2>&1 | tee ~/"$tag-$m.log"
+    done
+    tar czf ~/"$tag.tgz" -C var/runs "$tag" -C ~ "$tag-violations.log" "$tag-events.log" "$tag-both.log"
+    echo; grep -H "^BOARD" ~/"$tag"-*.log || true
+    echo "packed: ~/$tag.tgz  (laptop: gcloud compute scp test-vm-a100:~/$tag.tgz . --zone us-central1-f)"
     ;;
   load)
     in_api 'big=$(ls -S var/videos/*.mov | head -1); d=$(mktemp -d); for i in 1 2 3 4 5; do ln -s "$PWD/$big" "$d/worst-$i.mov"; done; echo "5 x $big"; python tools/eval.py --api http://localhost:8000 --key "${API_KEYS%%,*}" --files "$d"/*.mov --out var/runs/load --parallel 5; rm -rf "$d"'
