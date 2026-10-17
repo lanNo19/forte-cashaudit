@@ -30,6 +30,7 @@ States: **done** (tested), **working** (runs, numbers pending), **placeholder** 
 
 ## Log
 
+- 2026-10-17 21:40 · Claude · `deploy/vm.sh`: `eval`/`load` wait for `/healthz` (the load test after a rebuild failed in 0.2 s because the API was still starting), `VERIFY_*` and `MAX_VIOLATIONS` reach the eval process, `MODES=both deploy/vm.sh modes <tag>` runs one mode; `eval.py --api` prints the error of a failed job.
 - 2026-10-17 21:15 · Amina + Claude · datasets re-checked (`docs/RESEARCH.md`): MEVA and KZ-BD confirmed CC BY 4.0; DeepDoors2 licence unclear; no public safe/lock-screen data. External data = test material only; own oblique clips (#9) remain the best new data.
 - 2026-10-17 17:30 · Amina + Claude · CV people layer (#6): RF-DETR Small persons at VLM_FPS, room-floor filter (corridor behind the glass), greedy tracker + door-aware stitching, clothing colour only to re-identify after gaps > 1 s, roles by time/behaviour, CV scene guess when the VLM has none, `cashier_zone`. `data/cameras.json` (hand-drawn for the training camera, normalized). CV-only eval (42 clips): `BOARD Video acc 22/42 · Missed 20/22 · False alarms 0/20 · Median |dt| 0.7 s (≤2 s: 2/2) · Type acc 2/2 · Unanswered 0 · Schema errors 0`. RTX 3050: ~0.12 s/frame detect.
 - 2026-10-17 17:30 · Claude · A100 live: 42/42 answered, 0 schema errors, base-4b 22/42 (prompt bug, PR #12), load test 5×143 s slowest 81 s. `Dockerfile.gpu` (opt-in, on the vLLM image) for the CV layer.

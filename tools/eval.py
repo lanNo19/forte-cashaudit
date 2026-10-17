@@ -171,7 +171,8 @@ def run_api(base, key, items, out, parallel=1, timeout=330.0):
             timing[name] = round(dt, 2)
             (out / f"{name}.json").write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
             late = "  OVER 300 s" if dt > 300 else ""
-            print(f"  {name:12s} {body.get('status', '?'):8s} {body.get('verdict', ''):13s} {dt:6.1f}s{late}", flush=True)
+            err = f"  {str(body.get('error'))[:100]}" if body.get("status") != "done" and body.get("error") else ""
+            print(f"  {name:12s} {body.get('status', '?'):8s} {body.get('verdict', ''):13s} {dt:6.1f}s{late}{err}", flush=True)
     prev = {}
     tp = out / "_timing.json"
     if tp.exists():
