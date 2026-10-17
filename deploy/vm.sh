@@ -5,17 +5,25 @@
 #   prep <open.zip>   unpack the training clips into var/videos (names as eval.py expects, checksums checked)
 #   eval <run>        all 42 clips through the running API, 5 in parallel; results in var/runs/<run>
 #   modes [tag]       ML lead's comparison: eval-local with VLM_MODE violations, events, both; packs ~/<tag>.tgz
+#                     (DEBUG_EVENTS=1 deploy/vm.sh modes <tag> also saves raw VLM events and candidates per clip)
 #   load              jury worst case: the largest clip uploaded 5 times at once; slowest must be < 240 s
 #   logs [15m]        errors, timeouts and warnings from the API log
 #   pin               freeze the vLLM image to the digest that is running, switch to offline weights, restart
 #   idle              is it safe to stop the VM now? (no job queued or running)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Variables set on the command line that should reach the evaluation inside the container, e.g.
+#   DEBUG_EVENTS=1 deploy/vm.sh modes debug1      VLM_MODE / VLM_FPS / ... override .env for one run
+# (read before .env is loaded, so only what you typed is passed)
+PASS_ENV=$(env | grep -E '^(DEBUG_[A-Z_]*|VLM_[A-Z_]*|CV_[A-Z_]*|EVENTS_[A-Z_]*|FUSION_[A-Z_]*|OPEN_WORLD_CONF|VETO_[A-Z_]*)=' | cut -d= -f1 || true)
 [ -f .env ] && { set -a; . ./.env; set +a; }
 PORT=${API_PORT:-80}
 
 in_api() {  # NO_DOCKER=1 runs the same command on the host (for testing this script without Docker)
-  if [ -n "${NO_DOCKER:-}" ]; then sh -c "$1"; else docker compose exec -T api sh -c "$1"; fi
+  if [ -n "${NO_DOCKER:-}" ]; then sh -c "$1"; return; fi
+  set -- "$1"; local args=()
+  for v in $PASS_ENV; do args+=(-e "$v=${!v}"); done
+  docker compose exec -T "${args[@]}" api sh -c "$1"
 }
 
 case "${1:-status}" in
