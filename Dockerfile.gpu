@@ -15,12 +15,22 @@ WORKDIR /app
 COPY requirements.txt requirements-gpu.txt ./
 # torch, numpy and opencv come from the base image; install the service's other deps without touching them.
 # vLLM images may ship pip or only uv, so use whichever exists.
+# The constraints file pins the base image's torch/torchvision/numpy: if a CV package wants other versions, the build
+# fails loudly instead of silently downloading a second multi-GB torch.
 RUN if python3 -m pip --version >/dev/null 2>&1; then PIP="python3 -m pip install"; else PIP="uv pip install --system"; fi \
+ && python3 -c "import importlib.metadata as m, importlib.util as u; [print(f'{p}=={m.version(p)}') for p in ('torch', 'torchvision', 'numpy') if u.find_spec(p)]" > /tmp/constraints.txt \
+ && cat /tmp/constraints.txt \
  && grep -v -E '^(numpy|opencv)' requirements.txt > /tmp/req.txt \
- && $PIP -r /tmp/req.txt \
- && (python3 -c "import cv2" 2>/dev/null || $PIP opencv-python-headless) \
- && $PIP -r requirements-gpu.txt \
+ && $PIP -c /tmp/constraints.txt -r /tmp/req.txt \
+ && (python3 -c "import cv2" 2>/dev/null || $PIP -c /tmp/constraints.txt opencv-python-headless) \
+ && $PIP -c /tmp/constraints.txt -r requirements-gpu.txt \
  && python3 -c "import torch, cv2, numpy, fastapi; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'cv2', cv2.__version__)"
+# Bake the RF-DETR weights into the image (when rfdetr is installed) so the service needs no internet at run time
+# (brief, section 7). RF-DETR downloads them into the working directory, which is /app at run time too.
+ARG CV_DETECTOR=small
+RUN python3 -c "import importlib.util as u, sys; sys.exit(0 if u.find_spec('rfdetr') else 1)" \
+ && python3 -c "import rfdetr; getattr(rfdetr, {'nano':'RFDETRNano','small':'RFDETRSmall','medium':'RFDETRMedium','base':'RFDETRBase','large':'RFDETRLarge'}['${CV_DETECTOR}'])(device='cpu'); print('RF-DETR ${CV_DETECTOR} weights cached')" \
+ || echo "no detector weights baked in (rfdetr not installed, or the download failed)"
 
 COPY cashaudit cashaudit
 COPY data data
