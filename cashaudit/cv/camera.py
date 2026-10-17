@@ -52,9 +52,14 @@ class Camera:
     def in_room(self, p: Point) -> bool:
         return _inside(self.ref(p), self.room_floor) if self.room_floor else True
 
-    def near_door(self, p: Point) -> bool:
+    def near_door(self, p: Point, margin: float = 0.0) -> bool:
+        """In the door polygon, or within `margin` of it (normalized units, checked at 4 offsets)."""
         if self.door:
-            return _inside(self.ref(p), self.door)
+            q = self.ref(p)
+            if _inside(q, self.door):
+                return True
+            return margin > 0 and any(_inside((q[0] + dx, q[1] + dy), self.door)
+                                      for dx, dy in ((margin, 0), (-margin, 0), (0, margin), (0, -margin)))
         x, y = p
         return min(x, y, 1 - x, 1 - y) < EDGE
 

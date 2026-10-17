@@ -102,3 +102,12 @@ def test_safe_anchor_must_look_like_the_grey_safe():
     img[400:470, 60:120] = (30, 30, 30)  # black counting machine
     assert plausible("safe", (190 / 464, 250 / 848, 260 / 464, 350 / 848), img)
     assert not plausible("safe", (60 / 464, 400 / 848, 120 / 464, 470 / 848), img)
+
+
+def test_long_unknown_gap_breaks_a_run():  # A100 X-31: "y???y" made a false door_open
+    assert states.answers_to_events(series("y???y"), "door_open", "door_close") == []
+    assert kinds(states.answers_to_events(series("y?y"), "door_open", "door_close")) == [(0.0, "door_open")]
+
+
+def test_key_is_off_by_default():
+    assert "key" not in states.roi_boxes({"safe": (0.5, (0.4, 0.3, 0.5, 0.4))}, None)

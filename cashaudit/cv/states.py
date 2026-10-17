@@ -24,6 +24,8 @@ from ..events import Event
 
 STATE_FPS = float(os.getenv("CV_STATE_FPS", "1"))
 STATE_HOLD = int(os.getenv("CV_STATE_HOLD", "2"))  # consecutive samples before a state change is believed
+STATE_GAP_SEC = 2.0  # unknown answers longer than this break a run (A100: "y???y" on X-31 made a false door_open)
+STATE_KEY = os.getenv("CV_STATE_KEY", "0") == "1"  # the ~5 px key: A100 answers were noise, off by default
 STATE_BUDGET_SEC = float(os.getenv("CV_STATE_BUDGET_SEC", "60"))  # stop asking after this; the rest of the job needs time
 STATE_CONCURRENCY = int(os.getenv("CV_STATE_CONCURRENCY", os.getenv("VLM_CONCURRENCY", "4")))
 CROP_SIDE = 336  # VLM input per crop (Qwen3-VL: 14 px patches, so 24x24 patches)
@@ -73,7 +75,8 @@ def roi_boxes(anchors: Dict[str, Tuple[float, Box]], door: Optional[Box]) -> Dic
     out: Dict[str, Box] = {}
     if "safe" in anchors:
         out["safe"] = anchors["safe"][1]
-        out["key"] = lock_box(anchors["safe"][1])
+        if STATE_KEY:
+            out["key"] = lock_box(anchors["safe"][1])
     if "laptop" in anchors:
         out["screen"] = anchors["laptop"][1]
     if door:
@@ -166,10 +169,13 @@ def answers_to_events(series: Sequence[Tuple[float, Optional[bool]]], on_kind: s
     out: List[Event] = []
     state: Optional[bool] = None
     run_val: Optional[bool] = None
-    run_t, run_n = 0.0, 0
+    run_t, run_n, last_t = 0.0, 0, None
     for t, v in series:
         if v is None:
             continue
+        if last_t is not None and t - last_t > STATE_GAP_SEC:
+            run_val, run_n = None, 0  # a long stretch of unknowns: start counting again
+        last_t = t
         if v == run_val:
             run_n += 1
         else:

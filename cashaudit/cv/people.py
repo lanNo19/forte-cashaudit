@@ -33,6 +33,8 @@ STAY_A_FRAC = 0.85  # scene guess: cashier in the room for this fraction of the 
 AT_START_SEC = 0.5  # seen in the first two sampled frames = was there before the video started
 ZONE_HOLD = 2  # observations a cashier zone must hold before it is reported
 REID_GAP_SEC = 1.0  # after a longer gap, motion is not enough: clothing colour must match too
+DOOR_MARGIN = 0.06  # first sighting this close to the door = a real entry (normalized units)
+GHOST_DIST = 0.6  # a late track starting closer than this (box heights) to a tracked person is a duplicate box
 APP_MAX = 0.8  # clothing-colour distance (Bhattacharyya) above which two boxes are different people
 
 Box = Tuple[float, float, float, float]  # x1, y1, x2, y2, normalized to [0, 1]
@@ -157,7 +159,24 @@ def stitch(tracks: List[Track], cam: Camera, t0: float, t1: float) -> List[Track
             tracks.remove(b)
             changed = True
             break
-    return [tr for tr in tracks if tr.end - tr.start >= MIN_TRACK_SEC]
+    # A track that appears later, away from the door, right on top of a person already tracked is a duplicate box
+    # (X-14 on the A100: a second box on the seated cashier became an "other"). A real newcomer appears elsewhere, even
+    # when the door frames were missed (X-4: the client is first seen at the seat; X-30: the cashier at the desk).
+    long = [tr for tr in tracks if tr.end - tr.start >= MIN_TRACK_SEC]
+
+    def ghost(tr: Track) -> bool:
+        if tr.start <= t0 + AT_START_SEC or cam.near_door(tr.obs[0].foot, DOOR_MARGIN):
+            return False
+        first = tr.obs[0]
+        for o in long:
+            if o is tr or not (o.start < first.t <= o.end):
+                continue
+            near = min(o.obs, key=lambda x: abs(x.t - first.t))
+            if abs(near.t - first.t) <= MAX_GAP_SEC and _dist(near, first) < GHOST_DIST:
+                return True
+        return False
+
+    return [tr for tr in long if not ghost(tr)]
 
 
 def guess_scene(tracks: List[Track], t0: float, t1: float) -> Optional[str]:
@@ -173,14 +192,19 @@ def guess_scene(tracks: List[Track], t0: float, t1: float) -> Optional[str]:
     return "A" if any(tr is not cashier for tr in tracks) else None
 
 
-def assign_roles(tracks: List[Track], scene: Optional[str], t0: float, t1: float) -> Optional[str]:
-    """Sets track.role in place and returns the scene used (the given one, or a guess)."""
+def assign_roles(tracks: List[Track], scene: Optional[str], t0: float, t1: float) -> Tuple[Optional[str], Optional[str]]:
+    """Sets track.role in place. Returns (scene used, the given scene if our guess overruled it).
+
+    The behaviour guess wins over a given scene when they disagree: it was never wrong on the 42 training clips, while
+    the VLM called the session-5 client-desk clips (X-35..39) a cash room, which turned every client into an outsider."""
     if not tracks:
-        return scene
+        return scene, None
     at_start = [tr for tr in tracks if tr.start <= t0 + AT_START_SEC]
     cashier = max(at_start, key=lambda tr: (tr.end - tr.start, len(tr.obs))) if at_start else tracks[0]
     cashier.role = "cashier"
-    scene = scene or guess_scene(tracks, t0, t1)
+    guess = guess_scene(tracks, t0, t1)
+    overruled = scene if (scene and guess and guess != scene) else None
+    scene = guess or scene
     client_until = -1.0
     for tr in sorted(tracks, key=lambda tr: tr.start):
         if tr is cashier:
@@ -190,7 +214,7 @@ def assign_roles(tracks: List[Track], scene: Optional[str], t0: float, t1: float
             client_until = tr.end
         else:
             tr.role = "other"
-    return scene
+    return scene, overruled
 
 
 def cashier_zones(tr: Track, cam: Camera, t1: float, scene: Optional[str] = None) -> List[Event]:
@@ -218,7 +242,7 @@ def people_events(frames: Sequence[Tuple[float, Sequence[Box], Sequence[float]]]
         return [], scene, {"tracks": 0}
     t0, t1 = frames[0][0], frames[-1][0]
     tracks = stitch(track(filter_people(frames, cam)), cam, t0, t1)
-    scene = assign_roles(tracks, scene, t0, t1)
+    scene, overruled = assign_roles(tracks, scene, t0, t1)
     events: List[Event] = []
     for tr in tracks:
         c = round(min(0.95, tr.conf), 2)
@@ -230,5 +254,6 @@ def people_events(frames: Sequence[Tuple[float, Sequence[Box], Sequence[float]]]
             events.append(Event(tr.end, "person_exit", actor=tr.role, zone="room", conf=c, extra={"source": "cv"}))
         if tr.role == "cashier":
             events += cashier_zones(tr, cam, t1, scene)
-    info = {"tracks": len(tracks), "roles": [(tr.role, round(tr.start, 1), round(tr.end, 1)) for tr in tracks], "scene": scene}
+    info = {"tracks": len(tracks), "roles": [(tr.role, round(tr.start, 1), round(tr.end, 1)) for tr in tracks], "scene": scene,
+            "scene_overruled": overruled}
     return sorted(events, key=lambda e: e.t), scene, info
