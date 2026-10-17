@@ -13,6 +13,7 @@ Policy (the ML lead owns these numbers; tune with tools/eval.py and tools/calibr
 from __future__ import annotations
 
 import json
+import copy
 import os
 from typing import Callable, Dict, List, Optional
 
@@ -54,7 +55,7 @@ def _floor(c: Violation, floors: Dict[str, float]) -> float:
 
 def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floors: Optional[Dict[str, float]] = None) -> List[Violation]:
     floors = load_floors() if floors is None else floors
-    kept = [c for c in candidates if c.confidence >= _floor(c, floors)]
+    kept = [copy.deepcopy(c) for c in candidates if c.confidence >= _floor(c, floors)]  # never mutate the caller's candidates
 
     kept.sort(key=lambda v: (v.type_id, v.timecode_sec))
     merged: List[Violation] = []
