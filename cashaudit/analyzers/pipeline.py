@@ -103,6 +103,15 @@ def _around(frames, t, half=3.0, max_n=8):
     return _thin([f for f in frames if abs(f[0] - t) <= half], max_n)
 
 
+# T08/T12: the ID check happens before the handover, so verify sees the visit from (about) its start.
+VISIT_TYPES = set(filter(None, os.getenv("VISIT_TYPES", "T08,T09,T12").split(",")))
+VISIT_LOOKBACK = float(os.getenv("VISIT_LOOKBACK", "20"))
+
+
+def _visit(frames, t, max_n=12):
+    return _thin([f for f in frames if t - VISIT_LOOKBACK <= f[0] <= t + 2.0], max_n)
+
+
 class PipelineAnalyzer:
     name = "pipeline"
 
@@ -205,7 +214,8 @@ class PipelineAnalyzer:
         def verifier(v: Violation):
             if not vlm_ok or deadline.remaining() < 15:
                 return None
-            return self.vlm.verify(_around(frames, v.timecode_sec), v)
+            pick = _visit if v.type_id in VISIT_TYPES else _around
+            return self.vlm.verify(pick(frames, v.timecode_sec), v)
 
         final = fuse(candidates, verifier=verifier if vlm_ok else None)
         meta["stages"]["fusion"] = round(time.time() - t0, 2)
