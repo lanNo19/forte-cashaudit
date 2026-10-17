@@ -34,6 +34,8 @@ T00). Never write a legal reference by hand.
 | `POST /ui/analyze`, `GET /ui/jobs/{id}` | no key (UI) | same + `type_id`, `confidence`, `source`, `refs`, `meta`, `elapsed_sec` |
 | `GET /healthz` | – | `{"ok", "queue", "workers", "jobs", "analyzer"}` |
 
+`meta.scene` is the scene the pipeline used; when the CV layer's behaviour guess disagrees with the VLM's scene, the CV scene wins and the VLM's answer is in `meta.scene_vlm` (UI/debug only, not in the jury JSON).
+
 401 without a valid key, 400 for a non-video, 413 above `MAX_UPLOAD_MB`, 404 for an unknown job.
 
 ## 4. Event log (`cashaudit/events.py`): the seam between CV, VLM and rules
@@ -48,13 +50,13 @@ T00). Never write a legal reference by hand.
 | `handover` | `obj`: cash, id, cash_bag, doc, card; `extra.from`, `extra.to` | VLM (CV optional via hands) |
 | `object_placed`, `object_removed` | `obj`: cash, cash_bag, doc, tablet, handbag, coat, food, cup; `zone`: desk, safe | CV (desk change) + VLM |
 | `desk_clear` | – | CV |
-| `safe_open` / `safe_close` | – | CV (ROI state) |
-| `key_in_lock` / `key_removed` | – | CV (ROI crop, ~5 px key) |
-| `door_open` / `door_close` | – | CV (ROI state) |
+| `safe_open` / `safe_close` | – | CV (safe crop → local VLM, `cv/states.py`) |
+| `key_in_lock` / `key_removed` | – | CV (lock crop → local VLM; ~5 px key, weakest) |
+| `door_open` / `door_close` | – | CV (doorway crop → local VLM) |
 | `counting_start` / `counting_end` | `obj`: cash; `extra.device`: counter, hand, detector | CV for counter (ROI motion), VLM for hand/detector |
-| `screen_on` / `screen_locked` | `obj`: laptop | CV (ROI brightness) |
+| `screen_on` / `screen_locked` | `obj`: laptop | CV (laptop crop → local VLM) |
 | `consuming` | `actor`: cashier; `obj`: food, drink | VLM |
-| `lights_off` | – | CV (global brightness drop) |
+| `lights_off` | – | CV (global brightness held < 0.8 of the start) |
 
 VLM events carry `extra.source = "vlm"`. Overlapping windows are de-duplicated (same kind/obj/actor/zone within 3 s).
 
@@ -62,10 +64,10 @@ VLM events carry `extra.source = "vlm"`. Overlapping windows are de-duplicated (
 
 | Type | Fires when | Events it needs | Timecode |
 |---|---|---|---|
-| T01 door not closed | cashier enters; door still open 6 s later, no `door_close` | `person_enter(cashier)`, `door_open/close` | entry |
+| T01 door not closed | cashier enters; door confirmed open 6–8 s later (states are ~1 fps), no `door_close` | `person_enter(cashier)`, `door_open/close` | entry |
 | T02 outsider in cash room | `person_enter(other)` in scene B while the cashier works | `person_enter`, `cashier_zone` | entry |
 | T03 valuables left | cashier exits with cash/cash_bag/doc/tablet on the desk | `person_exit(cashier)`, `object_placed/removed`, `desk_clear` | exit |
-| T04 safe left open | safe open and cashier back at the desk > 2 s | `safe_open/close`, `cashier_zone` | back at desk |
+| T04 safe left open | safe open, cashier seen at the safe, then back at the desk > 2 s | `safe_open/close`, `cashier_zone` | back at desk |
 | T05 key in lock | cashier exits while key is in the lock | `key_in_lock/removed`, `person_exit(cashier)` | exit |
 | T06 screen not locked | cashier exits with screen on (no lights_off) | `screen_on/locked`, `person_exit`, `cashier_zone` | gets up |
 | T07 end of day | lights off while screen on | `lights_off`, `screen_on`, `person_exit` | exit |
@@ -102,7 +104,8 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `data/rules_kb.json` | 20 types: `id, name, scene, cue, refs[{src, point, strength}], examples, clean, seen_in_train` | by PR; `tests/test_kb.py` guards it |
 | `data/legal_index.json` | 46 legal points with opening quote and summary; the only allowed citations | by PR; `tools/build_legal_index.py` can fill quotes |
 | `data/thresholds.json` | `{"floors": {"T09": 0.71}}` | ML lead via `tools/calibrate.py --write` |
-| `data/cameras.json` | per camera, normalized `[x, y]` polygons: `room_floor`, `door`, `zones.{A,B}.safe` | CV (hand-drawn now; #7 proposes them) |
+| `data/cameras.json` | per camera, normalized `[x, y]` polygons: `room_floor`, `door`, `zones.{A,B}.safe` | CV (hand-drawn for the training camera) |
+| `data/camera_ref.npz` | ORB points + descriptors (no images) of one frame per training-camera session, for registration | CV via `tools/build_camera_ref.py` |
 | `data/train_annotations.csv` | clip, file, scene, label, timecode, type | fixed (add own recordings as new rows) |
 | `data/train_md5.json` | hashes for the oracle | fixed |
 
@@ -132,3 +135,5 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `CV_ENABLED` | 1 | 0 = skip the CV layer (it is also skipped when torch/rfdetr are missing) |
 | `CV_DETECTOR`, `CV_DET_THRESHOLD` | small, 0.3 | RF-DETR size (nano…large) and raw person threshold |
 | `CAMERA` | default | entry of `data/cameras.json` to use |
+| `CV_STATES`, `CV_STATE_FPS`, `CV_STATE_HOLD`, `CV_STATE_BUDGET_SEC`, `CV_STATE_CONCURRENCY` | 1, 1, 2, 60, `VLM_CONCURRENCY` | object states (#8): crops asked to the VLM per sampled second; a state must hold 2 samples; stop asking after 60 s |
+| `CV_ROI`, `CV_ROI_OWL`, `CV_ROI_MODEL` | 1, 1, google/owlv2-large-patch14-ensemble | per-video geometry: registration to the training camera, OWLv2 anchors (safe zone; door/floor when not registered) |

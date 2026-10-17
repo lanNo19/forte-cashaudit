@@ -4,7 +4,7 @@
     python3 tools/run_report.py var/runs/combo1/both            # all clips
     python3 tools/run_report.py var/runs/combo1/both --wrong    # only false alarms and misses
 
-Columns: clip, label scene, VLM scene (meta.scene), CV scene (meta.cv.scene), label, final violations as
+Columns: clip, label scene, VLM scene (meta.scene_vlm, else meta.scene), CV scene (meta.cv.scene), label, final violations as
 type@second/source/confidence. Debug runs (DEBUG_EVENTS=1) also list the candidates before fusion; a candidate's
 confidence hints at its path: rules give at most 0.8 x event confidence, the VLM scan gives its own number (usually 0.9+).
 Standard library only, so it runs on the VM host.
@@ -42,7 +42,8 @@ def main() -> int:
         if a.wrong and not wrong:
             continue
         rows += 1
-        vlm_s, cv_s = meta.get("scene") or "-", cv.get("scene") or "-"
+        # since PR #20 meta.scene is the scene actually used (CV's when it disagrees) and meta.scene_vlm the VLM's guess
+        vlm_s, cv_s = meta.get("scene_vlm") or meta.get("scene") or "-", cv.get("scene") or "-"
         if lab.get("scene") and vlm_s not in ("-", lab["scene"]):
             scene_bad += 1
         want = (lab.get("type_id") or "") + (f"@{lab['label_ts_sec']}" if lab.get("label_ts_sec") else "")

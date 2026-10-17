@@ -24,6 +24,7 @@ FOOD = ("food", "cup")
 ID_DOCS = ("id", "card", "doc")
 
 DOOR_GRACE_SEC = 6.0  # cashier must close the door within this many seconds of entering
+DOOR_SAMPLE_SEC = 2.0  # door states come from ~1 fps answers: "still open" may be confirmed up to this much later (A100 X-33)
 SAFE_AWAY_SEC = 2.0  # safe open while cashier is back at the desk for longer than this
 DETECTOR_WINDOW_SEC = 10.0
 
@@ -69,7 +70,8 @@ def t01_door_not_closed(log: EventLog) -> List[Violation]:
         return out  # CV produced no door states: say nothing rather than guess
     for e in log.of("person_enter", actor="cashier"):
         closed = [c for c in log.of("door_close") if e.t < c.t <= e.t + DOOR_GRACE_SEC]
-        if not closed and in_any(e.t + DOOR_GRACE_SEC, door_open):
+        late = e.t + DOOR_GRACE_SEC
+        if not closed and any(a < late + DOOR_SAMPLE_SEC and b > late for a, b in door_open):
             out.append(_v("T01", e.t, "Кассир вошла в кассовое помещение и прошла к рабочему месту, дверь за собой не закрыла",
                           [e.t, e.t + DOOR_GRACE_SEC / 2, e.t + DOOR_GRACE_SEC], 0.7 * e.conf))
     return out
@@ -97,7 +99,12 @@ def t03_valuables_left(log: EventLog) -> List[Violation]:
 def t04_safe_left_open(log: EventLog) -> List[Violation]:
     out = []
     for a, b in log.intervals("safe_open"):
-        desk = [z.t for z in log.of("cashier_zone", zone="desk") if a < z.t < b]
+        # "Back at the desk" only counts after the cashier was seen at the safe: where the safe and desk zones look alike
+        # from the camera (training room), CV said "desk" while she stood at the open safe (A100 X-25 false T04).
+        at_safe = [z.t for z in log.of("cashier_zone", zone="safe") if a - SAFE_AWAY_SEC <= z.t < b]
+        if not at_safe:
+            continue
+        desk = [z.t for z in log.of("cashier_zone", zone="desk") if max(a, min(at_safe)) < z.t < b]
         for t in desk:
             if b - t > SAFE_AWAY_SEC:
                 out.append(_v("T04", t, "Кассир отошла от сейфа к рабочему столу, оставив дверцу сейфа открытой", [t, min(b, t + 3)], 0.75))
