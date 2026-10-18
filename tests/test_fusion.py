@@ -48,3 +48,20 @@ def test_calibrate_suggests_floor_above_false_alarms(tmp_path):
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert json.loads(out.read_text())["floors"]["T09"] == 0.71
+
+
+def test_vlm_keep_policy_support_and_final_conf(monkeypatch):
+    import cashaudit.fusion as fu
+    one = [v("T12", 4, 0.9, "vlm")]
+    two = [v("T12", 4, 0.9, "vlm"), v("T12", 8, 0.7, "vlm")]
+    ev = [v("T09", 57, 0.8, "events")]
+    assert len(fuse(one, verifier=lambda c: 0.98, floors={})) == 1  # off by default
+    monkeypatch.setattr(fu, "VLM_SUPPORT_MIN", 2)
+    assert fuse(one, verifier=lambda c: 0.98, floors={}) == []  # a single window is not enough
+    assert len(fuse(two, verifier=lambda c: 0.98, floors={})) == 1  # two candidates within MERGE_SEC
+    assert len(fuse(ev, verifier=lambda c: 0.9, floors={})) == 1  # CV events untouched
+    monkeypatch.setattr(fu, "VLM_SUPPORT_TYPES", {"T08"})
+    assert len(fuse(one, verifier=lambda c: 0.98, floors={})) == 1  # T12 not in the list
+    monkeypatch.setattr(fu, "VLM_SUPPORT_MIN", 1)
+    monkeypatch.setattr(fu, "VLM_FINAL_CONF", 0.99)
+    assert fuse(one, verifier=lambda c: 0.98, floors={}) == []

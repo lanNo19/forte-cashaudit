@@ -7,6 +7,9 @@ Policy (the ML lead owns these numbers; tune with tools/eval.py and tools/calibr
 - merge candidates of the same type closer than MERGE_SEC; the event layer's timecode wins;
 - the VLM verifier re-scores VLM candidates, and may VETO event-layer candidates only for types it can actually
   see (people, objects on the desk, the door). Tiny states (key in lock, screen lock, safe door) stay with CV;
+- optional, off by default (chosen with deploy/experiments/fusion_sim.py on saved runs): a VLM-only violation must
+  reach VLM_FINAL_CONF after verification, and/or be backed by VLM_SUPPORT_MIN candidates of its type within MERGE_SEC
+  (two overlapping windows, or the scan prompt and the event prompt agreeing), for VLM_SUPPORT_TYPES (empty = all);
 - keep at most MAX_VIOLATIONS, highest confidence first.
 """
 
@@ -30,6 +33,10 @@ EVENTS_OWN = set(filter(None, os.getenv("EVENTS_OWN", "").split(",")))
 # Types the VLM can see well enough to veto an event-layer candidate.
 VETO_TYPES = set(filter(None, os.getenv("VETO_TYPES", "T02,T03,T08,T09,T10,T11,T12,T16,T17,T18,T19,T20").split(",")))
 VETO_BELOW = float(os.getenv("VETO_BELOW", "0.35"))
+# Stricter keeping of VLM-only violations (both off by default).
+VLM_FINAL_CONF = float(os.getenv("VLM_FINAL_CONF", "0"))
+VLM_SUPPORT_MIN = int(os.getenv("VLM_SUPPORT_MIN", "1"))
+VLM_SUPPORT_TYPES = set(filter(None, os.getenv("VLM_SUPPORT_TYPES", "").split(",")))
 THRESHOLDS_PATH = os.getenv("THRESHOLDS_PATH", str(ROOT / "data" / "thresholds.json"))
 
 Verifier = Callable[[Violation], Optional[float]]  # returns new confidence, or None when it could not check
@@ -54,6 +61,7 @@ def _floor(c: Violation, floors: Dict[str, float]) -> float:
 
 def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floors: Optional[Dict[str, float]] = None) -> List[Violation]:
     floors = load_floors() if floors is None else floors
+    raw = [(c.type_id, c.timecode_sec) for c in candidates]  # before floors and merging: what support counts
     kept = [c for c in candidates if c.confidence >= _floor(c, floors)]
 
     kept.sort(key=lambda v: (v.type_id, v.timecode_sec))
@@ -86,5 +94,16 @@ def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floor
                     checked.append(v)
         merged = checked
 
+    def vlm_ok(v: Violation) -> bool:
+        if v.source != "vlm":
+            return True  # CV events and fused (CV + VLM) findings are not touched
+        if VLM_FINAL_CONF and v.confidence < VLM_FINAL_CONF:
+            return False
+        if VLM_SUPPORT_MIN > 1 and (not VLM_SUPPORT_TYPES or v.type_id in VLM_SUPPORT_TYPES):
+            n = sum(1 for tid, t in raw if tid == v.type_id and abs(t - v.timecode_sec) <= MERGE_SEC)
+            return n >= VLM_SUPPORT_MIN
+        return True
+
+    merged = [v for v in merged if vlm_ok(v)]
     merged.sort(key=lambda v: -v.confidence)
     return sorted(merged[:MAX_VIOLATIONS], key=lambda v: v.timecode_sec)
