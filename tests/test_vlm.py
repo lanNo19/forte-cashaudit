@@ -117,3 +117,14 @@ def test_english_rule_cards_switch(monkeypatch):
     monkeypatch.setenv("VLM_PROMPT_LANG", "en")
     cards = vlm._rule_cards(["T05"])
     assert "T05: Key left in the safe lock. Visual cue: After the cashier closes the safe" in cards
+
+
+def test_time_text_parts_before_each_frame(monkeypatch):
+    c = VLMClient(base_url="http://fake/v1", model="fake", input_mode="images")
+    fr = frames(10.0, 3)
+    assert [p["type"] for p in c._media(fr)] == ["image_url"] * 3
+    monkeypatch.setenv("VLM_TIME_TEXT", "1")
+    parts = c._media(fr)
+    assert [p["type"] for p in parts] == ["text", "image_url"] * 3
+    assert parts[0]["text"] == "<10.0 seconds>" and parts[4]["text"] == "<12.0 seconds>"
+    assert "<t seconds>" in c._time_hint(fr)
