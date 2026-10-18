@@ -121,6 +121,12 @@ async def job_status(job_id: str):
     return JSONResponse(_jury_view(job))
 
 
+# The same two calls without the /api/v1 prefix: a jury script that takes "API base URL" as https://host/api/v1 and
+# appends /analyze works, and so does one that takes https://host and appends /api/v1/analyze. Same key, same JSON.
+app.add_api_route("/analyze", analyze, methods=["POST"], dependencies=[Depends(require_key)], include_in_schema=False)
+app.add_api_route("/jobs/{job_id}", job_status, methods=["GET"], dependencies=[Depends(require_key)], include_in_schema=False)
+
+
 # ---------------- UI ----------------
 @app.get("/", include_in_schema=False)
 async def index():
