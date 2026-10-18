@@ -85,3 +85,18 @@ def test_ui_routes(client, video):
         time.sleep(0.1)
     assert b["status"] == "done" and "elapsed_sec" in b
     assert client.get("/healthz").json()["ok"] is True
+
+
+def test_routes_without_api_v1_prefix(client, video):
+    with open(video, "rb") as f:
+        assert client.post("/analyze", files={"file": ("a.mov", f, "video/quicktime")}).status_code == 401
+    with open(video, "rb") as f:
+        r = client.post("/analyze", headers={"X-API-Key": "test-key"}, files={"file": ("a.mov", f, "video/quicktime")})
+    assert r.status_code == 200
+    jid = r.json()["job_id"]
+    for _ in range(100):
+        b = client.get(f"/jobs/{jid}", headers={"X-API-Key": "test-key"}).json()
+        if b["status"] != "processing":
+            break
+        time.sleep(0.1)
+    assert b == {"job_id": jid, "status": "done", "verdict": "no_violation", "violations": []}
