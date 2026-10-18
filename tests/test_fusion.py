@@ -65,3 +65,9 @@ def test_vlm_keep_policy_support_and_final_conf(monkeypatch):
     monkeypatch.setattr(fu, "VLM_SUPPORT_MIN", 1)
     monkeypatch.setattr(fu, "VLM_FINAL_CONF", 0.99)
     assert fuse(one, verifier=lambda c: 0.98, floors={}) == []
+
+
+def test_support_min_argument_overrides_env():
+    one = [v("T12", 4, 0.9, "vlm")]
+    assert fuse(one, verifier=lambda c: 0.98, floors={}, support_min=2) == []
+    assert len(fuse(one, verifier=lambda c: 0.98, floors={}, support_min=1)) == 1

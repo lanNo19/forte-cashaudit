@@ -37,6 +37,8 @@ VETO_BELOW = float(os.getenv("VETO_BELOW", "0.35"))
 VLM_FINAL_CONF = float(os.getenv("VLM_FINAL_CONF", "0"))
 VLM_SUPPORT_MIN = int(os.getenv("VLM_SUPPORT_MIN", "1"))
 VLM_SUPPORT_TYPES = set(filter(None, os.getenv("VLM_SUPPORT_TYPES", "").split(",")))
+# all = every video; new_camera = only when the CV layer could not register the camera to the training room
+VLM_SUPPORT_SCOPE = os.getenv("VLM_SUPPORT_SCOPE", "all")
 THRESHOLDS_PATH = os.getenv("THRESHOLDS_PATH", str(ROOT / "data" / "thresholds.json"))
 
 Verifier = Callable[[Violation], Optional[float]]  # returns new confidence, or None when it could not check
@@ -59,8 +61,10 @@ def _floor(c: Violation, floors: Dict[str, float]) -> float:
     return floor
 
 
-def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floors: Optional[Dict[str, float]] = None) -> List[Violation]:
+def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floors: Optional[Dict[str, float]] = None,
+         support_min: Optional[int] = None) -> List[Violation]:
     floors = load_floors() if floors is None else floors
+    support_min = VLM_SUPPORT_MIN if support_min is None else support_min
     raw = [(c.type_id, c.timecode_sec) for c in candidates]  # before floors and merging: what support counts
     kept = [c for c in candidates if c.confidence >= _floor(c, floors)]
 
@@ -99,9 +103,9 @@ def fuse(candidates: List[Violation], verifier: Optional[Verifier] = None, floor
             return True  # CV events and fused (CV + VLM) findings are not touched
         if VLM_FINAL_CONF and v.confidence < VLM_FINAL_CONF:
             return False
-        if VLM_SUPPORT_MIN > 1 and (not VLM_SUPPORT_TYPES or v.type_id in VLM_SUPPORT_TYPES):
+        if support_min > 1 and (not VLM_SUPPORT_TYPES or v.type_id in VLM_SUPPORT_TYPES):
             n = sum(1 for tid, t in raw if tid == v.type_id and abs(t - v.timecode_sec) <= MERGE_SEC)
-            return n >= VLM_SUPPORT_MIN
+            return n >= support_min
         return True
 
     merged = [v for v in merged if vlm_ok(v)]
