@@ -36,7 +36,8 @@ T00). Never write a legal reference by hand.
 
 `meta.scene` is the scene the pipeline used; when the CV layer's behaviour guess disagrees with the VLM's scene, the CV scene wins and the VLM's answer is in `meta.scene_vlm` (UI/debug only, not in the jury JSON).
 
-401 without a valid key, 400 for a non-video, 413 above `MAX_UPLOAD_MB`, 404 for an unknown job.
+401 without a valid key, 400 for a non-video, 413 above `MAX_UPLOAD_MB`, 404 for an unknown job. The two jury calls also answer
+without the prefix (`POST /analyze`, `GET /jobs/{job_id}`, same key and JSON), so either reading of "API base URL" works.
 
 ## 4. Event log (`cashaudit/events.py`): the seam between CV, VLM and rules
 
