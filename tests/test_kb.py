@@ -21,8 +21,6 @@ def test_every_rule_reference_exists_in_the_legal_index():
         have.setdefault(e["src"], set()).update(_point_numbers(e["point"]))
     for t in kb.load_kb()["types"]:
         for r in t["refs"]:
-            if r["src"] == "BANKS":
-                continue  # article number deliberately left open (new law of 16.01.2026)
             missing = _point_numbers(r["point"]) - have.get(r["src"], set())
             assert not missing, f"{t['id']} cites {r['src']} {sorted(missing)} which is not in legal_index.json"
 

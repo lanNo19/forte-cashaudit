@@ -130,6 +130,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `EVENTS_MIN_CONF`, `VLM_MIN_CONF`, `OPEN_WORLD_CONF`, `VLM_ALONE_CONF` | 0.5, 0.6, 0.85, 0.8 | fusion floors |
 | `VETO_TYPES`, `VETO_BELOW` | visible types, 0.35 | VLM veto of event candidates |
 | `EVENTS_OWN` | (empty) | types where VLM-only candidates need `VLM_ALONE_CONF` |
+| `VLM_FINAL_CONF`, `VLM_SUPPORT_MIN`, `VLM_SUPPORT_TYPES`, `VLM_SUPPORT_SCOPE`, `VLM_SCENE_MATCH` | 0, 1, (all), all, 0 | stricter keeping of VLM-only violations (off by default): verifier P(yes) floor; candidates of the type within `FUSION_MERGE_SEC` (windows/prompts agreeing); types the support rule applies to; `new_camera` = support rule only when the CV layer could not register the camera (`meta.cv.roi.registered` false, `meta.support_rule`); type must belong to the scene used. Try them offline with `deploy/experiments/fusion_sim.py` |
 | `MAX_VIOLATIONS` | 5 | per video |
 | `KEEP_VIDEOS` | false | uploaded videos are deleted after analysis |
 | `CV_ENABLED` | 1 | 0 = skip the CV layer (it is also skipped when torch/rfdetr are missing) |

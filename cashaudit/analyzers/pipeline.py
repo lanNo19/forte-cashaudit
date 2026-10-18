@@ -19,7 +19,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
-from .. import rules
+from .. import kb, rules
 from ..config import settings
 from ..events import EventLog
 from ..fusion import fuse
@@ -215,7 +215,16 @@ class PipelineAnalyzer:
                 return None
             return self.vlm.verify(_around(frames, v.timecode_sec), v)
 
-        final = fuse(candidates, verifier=verifier if vlm_ok else None)
+        support_min = None  # fusion's VLM_SUPPORT_MIN; with VLM_SUPPORT_SCOPE=new_camera only for an unregistered camera
+        if os.getenv("VLM_SUPPORT_SCOPE", "all") == "new_camera":
+            new_cam = ((meta.get("cv") or {}).get("roi") or {}).get("registered") is False
+            support_min = None if new_cam else 1
+            meta["support_rule"] = "on" if new_cam else "off"
+        final = fuse(candidates, verifier=verifier if vlm_ok else None, support_min=support_min)
+        if os.getenv("VLM_SCENE_MATCH", "0") == "1" and scene in ("A", "B"):
+            # a VLM-only violation must be a rule of the room the pipeline decided on (desk A / cash room B); T00 stays
+            by_id = kb.load_kb()["by_id"]
+            final = [v for v in final if v.source != "vlm" or by_id.get(v.type_id, {}).get("scene") in (None, scene)]
         meta["stages"]["fusion"] = round(time.time() - t0, 2)
         meta["runtime_sec"] = round(time.time() - t_start, 2)
         meta["n_candidates"] = len(candidates)
