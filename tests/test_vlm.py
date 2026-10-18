@@ -170,3 +170,21 @@ def test_check_style_without_summary(monkeypatch):
     vs = fake_client(handler).scan_window(frames(), ["T05"])
     assert [v.type_id for v in vs] == ["T05"]
     assert "\"happens\"" not in seen["prompt"] and "Step 1" not in seen["prompt"] and "For EVERY checklist id" in seen["prompt"]
+
+
+def test_verify_context_window(monkeypatch):
+    import importlib
+    from cashaudit.schema import Violation
+    fr = [(float(t), None) for t in range(0, 40)]
+    v = Violation(type_id="T08", type="x", timecode_sec=30.0, description="", evidence_ts=[30.0])
+    assert [f[0] for f in pl._verify_frames(fr, v)][0] >= 27.0  # default: +-3 s
+    monkeypatch.setenv("VERIFY_BEFORE_SEC", "20")
+    mod = importlib.reload(pl)
+    try:
+        got = [f[0] for f in mod._verify_frames(fr, v)]
+        assert got[0] <= 11.0 and got[-1] <= 33.0 and len(got) <= 16
+        v.type_id = "T02"  # not a context type: unchanged
+        assert [f[0] for f in mod._verify_frames(fr, v)][0] >= 27.0
+    finally:
+        monkeypatch.delenv("VERIFY_BEFORE_SEC")
+        importlib.reload(pl)

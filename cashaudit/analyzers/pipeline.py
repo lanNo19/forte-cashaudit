@@ -104,8 +104,22 @@ def _thin(chunk, max_n):
     return [chunk[int(i * step)] for i in range(max_n)]
 
 
-def _around(frames, t, half=3.0, max_n=8):
-    return _thin([f for f in frames if abs(f[0] - t) <= half], max_n)
+def _around(frames, t, half=3.0, max_n=8, before=None):
+    lo = t - (half if before is None else before)
+    return _thin([f for f in frames if lo <= f[0] <= t + half], max_n)
+
+
+# The verifier sees +-3 s around a candidate. Types decided by what happened EARLIER (ID before cash, documents before
+# the bag, a client being served when a third person walks in) can look back VERIFY_BEFORE_SEC instead (0 = off).
+VERIFY_BEFORE_SEC = float(os.getenv("VERIFY_BEFORE_SEC", "0"))
+VERIFY_CONTEXT_TYPES = set(filter(None, os.getenv("VERIFY_CONTEXT_TYPES", "T08,T09,T10,T11,T12,T20").split(",")))
+VERIFY_CONTEXT_FRAMES = int(os.getenv("VERIFY_CONTEXT_FRAMES", "16"))
+
+
+def _verify_frames(frames, v):
+    if VERIFY_BEFORE_SEC > 0 and v.type_id in VERIFY_CONTEXT_TYPES:
+        return _around(frames, v.timecode_sec, 3.0, VERIFY_CONTEXT_FRAMES, before=VERIFY_BEFORE_SEC)
+    return _around(frames, v.timecode_sec)
 
 
 class PipelineAnalyzer:
@@ -218,7 +232,7 @@ class PipelineAnalyzer:
         def verifier(v: Violation):
             if not vlm_ok or deadline.remaining() < 15:
                 return None
-            return self.vlm.verify(_around(frames, v.timecode_sec), v)
+            return self.vlm.verify(_verify_frames(frames, v), v)
 
         support_min = None  # fusion's VLM_SUPPORT_MIN; with VLM_SUPPORT_SCOPE=new_camera only for an unregistered camera
         if os.getenv("VLM_SUPPORT_SCOPE", "all") == "new_camera":

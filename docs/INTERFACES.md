@@ -134,6 +134,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `VLM_SCAN_SKIP` | (empty) | types the window scan may not name (e.g. `T08,T12`): rules.py decides them on the event log merged over all windows |
 | `VLM_SCAN_STYLE` | list | `check` = the window scan verifies a checklist (one-sentence summary, then ok / unclear / violation for every rule, "ok" the expected answer) instead of listing violations |
 | `VLM_CHECK_SUMMARY` | 1 | with `VLM_SCAN_STYLE=check`: 0 = no one-sentence summary before the verdicts (no written reasoning in the answer) |
+| `VERIFY_BEFORE_SEC`, `VERIFY_CONTEXT_TYPES`, `VERIFY_CONTEXT_FRAMES` | 0, T08,T09,T10,T11,T12,T20, 16 | the verifier sees ±3 s around a candidate; > 0 = for the context types it looks back this many seconds (to 3 s after), up to 16 frames |
 | `EVENTS_MIN_CONF`, `VLM_MIN_CONF`, `OPEN_WORLD_CONF`, `VLM_ALONE_CONF` | 0.5, 0.6, 0.85, 0.8 | fusion floors |
 | `VETO_TYPES`, `VETO_BELOW` | visible types, 0.35 | VLM veto of event candidates |
 | `EVENTS_OWN` | (empty) | types where VLM-only candidates need `VLM_ALONE_CONF` |
