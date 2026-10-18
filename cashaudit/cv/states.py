@@ -29,7 +29,7 @@ STATE_GAP_SEC = 2.5  # unknown answers longer than this break a run (A100: "y???
 # "n?n" at 12.012/14.014 s lost the safe_close and kept the safe "open" until 19 s: false T04)
 STATE_KEY = os.getenv("CV_STATE_KEY", "0") == "1"  # the ~5 px key: A100 answers were noise, off by default
 STATE_BUDGET_SEC = float(os.getenv("CV_STATE_BUDGET_SEC", "60"))  # stop asking after this; the rest of the job needs time
-STATE_CONCURRENCY = int(os.getenv("CV_STATE_CONCURRENCY", os.getenv("VLM_CONCURRENCY", "4")))
+STATE_CONCURRENCY = int(os.getenv("CV_STATE_CONCURRENCY", os.getenv("VLM_CONCURRENCY", "8")))
 CROP_SIDE = 336  # VLM input per crop (Qwen3-VL: 14 px patches, so 24x24 patches)
 LIGHTS_DROP = 0.8  # held below this fraction of the opening brightness = lights off. Auto-exposure brightens the
 # dark room again (X-11: 137 -> 20 -> ~90, i.e. 0.66); other clips never hold below 0.96 (training clips)
