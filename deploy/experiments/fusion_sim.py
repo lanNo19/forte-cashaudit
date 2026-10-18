@@ -18,6 +18,8 @@ Policies (all leave CV "events" and "fused" violations alone):
     win2+scene   both
     win2@new     win2, but only when the CV layer could not register the camera to the training room (meta.cv.roi
     win2A@new    .registered is false): a new camera/room. Training clips and their shifted copies all register.
+    noscanA      ordering types (T08 T09 T11 T12 T20) only from the event log: a VLM-only violation of these types
+                 is dropped (the order is computed by the rules from VLM/CV events, not judged by the model)
 """
 import csv
 import json
@@ -69,10 +71,12 @@ def keep(policy, v, cands, meta):
         return ok_scene
     if policy == "win2+scene":
         return ok_win and ok_scene
+    if policy == "noscanA":
+        return tid(v) not in ORDER_A
     raise ValueError(policy)
 
 
-POLICIES = ["base", "p80", "p90", "p95", "win2", "win2A", "scene", "win2+scene", "win2@new", "win2A@new"]
+POLICIES = ["base", "p80", "p90", "p95", "win2", "win2A", "scene", "win2+scene", "win2@new", "win2A@new", "noscanA"]
 
 
 def score(run, labels, policy):

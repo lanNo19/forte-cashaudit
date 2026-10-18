@@ -75,6 +75,12 @@ def _card(t: dict) -> str:
     return f"{t['name']}. Visual cue: {t['cue']}"
 
 
+def _time_text() -> bool:
+    """VLM_TIME_TEXT=1: put "<12.5 seconds>" as a text part before every image, the timestamp format Qwen3-VL was trained
+    with for video (tech report, arXiv 2511.21631), on top of the time burned into the frame. Off by default."""
+    return os.getenv("VLM_TIME_TEXT", "0") == "1"
+
+
 def _rule_cards(ids: Optional[Sequence[str]] = None) -> str:
     lines = []
     for t in kb.load_kb()["types"]:
@@ -154,13 +160,20 @@ class VLMClient:
             span = max(frames[-1][0] - frames[0][0], 1e-3)
             fps = (len(frames) - 1) / span
             return [{"type": "video_url", "video_url": {"url": _mp4_data_url(frames, fps)}}]
-        return [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{jpeg_b64(burn_timestamp(img, t), quality=85)}"}}
-                for t, img in frames]
+        parts = []
+        for t, img in frames:
+            if _time_text():  # Qwen3-VL's own training format: a "<t seconds>" text part before each frame
+                parts.append({"type": "text", "text": f"<{t:.1f} seconds>"})
+            parts.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{jpeg_b64(burn_timestamp(img, t), quality=85)}"}})
+        return parts
 
     def _time_hint(self, frames: Frames) -> str:
         t0, t1 = frames[0][0], frames[-1][0]
         if self.input_mode == "video":
             return f"This clip is {t1 - t0:.1f} s long. Give every time t in seconds from the START OF THIS CLIP."
+        if _time_text():
+            return (f"These frames cover t={t0:.1f}s to t={t1:.1f}s; each frame comes right after its time <t seconds> and also "
+                    "shows it in the top-left corner. Give t in seconds as written before the frame.")
         return f"These frames cover t={t0:.1f}s to t={t1:.1f}s; each frame shows its time in the top-left corner. Give t as read from the frame label."
 
     def _abs_t(self, t: float, frames: Frames) -> float:
