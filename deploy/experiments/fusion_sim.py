@@ -11,7 +11,8 @@ A policy only removes final violations; the clip's verdict is "violation" iff an
 
 Policies (all leave CV "events" and "fused" violations alone):
     base         as shipped
-    p80/p90/p95  VLM violation needs verifier P(yes) >= 0.80 / 0.90 / 0.95
+    p80 … p99    VLM violation needs verifier P(yes) >= 0.80 … 0.99 (run time: VLM_FINAL_CONF=0.8 … 0.99)
+    pXX+win2     both (run time: VLM_FINAL_CONF + VLM_SUPPORT_MIN=2); pXX+scene likewise with VLM_SCENE_MATCH=1
     win2         VLM violation needs >= 2 candidates of its type within +-6 s (two windows or both prompts agree)
     win2A        win2 only for the scene-A order types T08 T09 T11 T12 T20
     scene        VLM violation's type must belong to the scene the pipeline used (meta.scene)
@@ -60,7 +61,10 @@ def keep(policy, v, cands, meta):
     p = v.get("confidence") or 0
     if policy == "base":
         return True
-    if policy in ("p80", "p90", "p95"):
+    if "+" in policy and policy.split("+")[0].startswith("p") and policy.split("+")[0][1:].isdigit():
+        a, b = policy.split("+", 1)
+        return keep(a, v, cands, meta) and keep(b, v, cands, meta)
+    if policy.startswith("p") and policy[1:].isdigit():  # p80, p95, p99: verifier P(yes) floor = VLM_FINAL_CONF
         return p >= int(policy[1:]) / 100
     ok_win = support(v, cands) >= 2
     ok_scene = not meta.get("scene") or SCENE.get(tid(v)) in (None, meta["scene"])
@@ -77,7 +81,10 @@ def keep(policy, v, cands, meta):
     raise ValueError(policy)
 
 
-POLICIES = ["base", "p80", "p90", "p95", "win2", "win2A", "scene", "win2+scene", "win2@new", "win2A@new", "noscanA"]
+POLICIES = ["base", "p80", "p90", "p95", "p97", "p99", "win2", "win2A", "scene", "win2+scene", "p90+win2", "p95+win2",
+            "p90+scene", "win2@new", "win2A@new", "noscanA"]
+if __import__("os").getenv("POLICIES"):
+    POLICIES = __import__("os").getenv("POLICIES").split(",")
 
 
 def score(run, labels, policy):
