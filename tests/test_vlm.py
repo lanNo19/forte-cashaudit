@@ -156,3 +156,17 @@ def test_check_style_keeps_only_items_marked_violation(monkeypatch):
     vs = fake_client(handler).scan_window(frames(), ["T05", "T08", "T12"])
     assert [(v.type_id, v.timecode_sec, v.source) for v in vs] == [("T05", 3.0, "vlm")]
     assert '"ok" = the procedure is followed' in seen["prompt"] and "for EVERY checklist id" in seen["prompt"]
+
+
+def test_check_style_without_summary(monkeypatch):
+    monkeypatch.setenv("VLM_SCAN_STYLE", "check")
+    monkeypatch.setenv("VLM_CHECK_SUMMARY", "0")
+    seen = {}
+
+    def handler(req):
+        seen["prompt"] = json.loads(req.content)["messages"][1]["content"][-1]["text"]
+        return reply(json.dumps({"checks": {"T05": "violation"}, "violations": [{"type_id": "T05", "t": 3.0, "observed": "Ключ."}]}))
+
+    vs = fake_client(handler).scan_window(frames(), ["T05"])
+    assert [v.type_id for v in vs] == ["T05"]
+    assert "happens" not in seen["prompt"] and "Step 1" not in seen["prompt"] and "For EVERY checklist id" in seen["prompt"]

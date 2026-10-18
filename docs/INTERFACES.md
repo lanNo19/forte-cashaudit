@@ -133,6 +133,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `VLM_TIME_TEXT` | 0 | 1 = a `<12.5 seconds>` text part before every frame sent to the VLM (Qwen3-VL's own video timestamp format), on top of the burned-in time |
 | `VLM_SCAN_SKIP` | (empty) | types the window scan may not name (e.g. `T08,T12`): rules.py decides them on the event log merged over all windows |
 | `VLM_SCAN_STYLE` | list | `check` = the window scan verifies a checklist (one-sentence summary, then ok / unclear / violation for every rule, "ok" the expected answer) instead of listing violations |
+| `VLM_CHECK_SUMMARY` | 1 | with `VLM_SCAN_STYLE=check`: 0 = no one-sentence summary before the verdicts (no written reasoning in the answer) |
 | `EVENTS_MIN_CONF`, `VLM_MIN_CONF`, `OPEN_WORLD_CONF`, `VLM_ALONE_CONF` | 0.5, 0.6, 0.85, 0.8 | fusion floors |
 | `VETO_TYPES`, `VETO_BELOW` | visible types, 0.35 | VLM veto of event candidates |
 | `EVENTS_OWN` | (empty) | types where VLM-only candidates need `VLM_ALONE_CONF` |

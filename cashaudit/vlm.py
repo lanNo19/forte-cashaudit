@@ -212,17 +212,19 @@ class VLMClient:
         """VLM_SCAN_STYLE=check: verify a checklist instead of hunting for violations. The model first says what happens,
         then marks EVERY item ok / violation / unclear, with "ok" the expected answer (research: paired normal/breach rules
         and an abstain option cut false positives; a "list the violations" prompt makes a small VLM find some)."""
+        summary = os.getenv("VLM_CHECK_SUMMARY", "1") == "1"  # 0 = no written reasoning before the verdict
         prompt = (
             f"{self._time_hint(frames)}\n"
             "You are checking a cashier's routine work against a checklist. Most of the time the work is normal.\n"
             f"Checklist (id: what a breach would look like):\n{_rule_cards(ids)}\n\n"
-            "Step 1: in one sentence, say what actually happens in these frames.\n"
-            "Step 2: for EVERY checklist id give one status:\n"
+            + ("Step 1: in one sentence, say what actually happens in these frames.\nStep 2: f" if summary else "F")
+            + "or EVERY checklist id give one status:\n"
             '  "ok" = the procedure is followed, or the situation does not occur in these frames (the usual answer)\n'
             '  "unclear" = the relevant moment or object is not visible or too small to judge\n'
             '  "violation" = you can point to the frame where the breach clearly happens\n'
             "Return JSON only, no prose:\n"
-            '{"happens": "<one sentence>", "checks": {"<id>": "ok|unclear|violation"}, '
+            + ('{"happens": "<one sentence>", ' if summary else "{")
+            + '"checks": {"<id>": "ok|unclear|violation"}, '
             '"violations": [{"type_id": "<id marked violation>", "t": <seconds, read from the frame>, '
             '"observed": "<1-2 sentences in Russian: exactly what is visible>"}]}'
         )
