@@ -51,7 +51,9 @@
    "clean": [
     "X-31"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Cash-room door left open after entering",
+   "cue_en": "The cashier enters the cash room and walks to the workplace without closing or locking the door behind them (normally they turn around and close the door)."
   },
   {
    "id": "T02",
@@ -76,7 +78,9 @@
    "clean": [
     "X-31"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Unauthorized person in the cash room",
+   "cue_en": "A person who is not the cashier enters the room with the cash and the safe while work is going on."
   },
   {
    "id": "T03",
@@ -105,7 +109,9 @@
     "X-25",
     "X-27"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Cash or valuables left unattended when leaving the workplace",
+   "cue_en": "The cashier leaves the room with cash, a cash-collection bag or valuables/documents left on the desk instead of putting them into the safe."
   },
   {
    "id": "T04",
@@ -130,7 +136,9 @@
    "clean": [
     "X-21"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Safe left open",
+   "cue_en": "The cashier opens the safe, takes valuables out and walks away or works at the desk without closing the safe door."
   },
   {
    "id": "T05",
@@ -155,7 +163,9 @@
    "clean": [
     "X-23"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Key left in the safe lock",
+   "cue_en": "The cashier closes the safe and leaves with the key still in the keyhole (normally the key is taken away)."
   },
   {
    "id": "T06",
@@ -175,7 +185,9 @@
    "clean": [
     "X-29"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Workstation not locked when leaving",
+   "cue_en": "The cashier gets up and leaves while the laptop screen stays active with data visible (normally the screen is locked or turned off first)."
   },
   {
    "id": "T07",
@@ -200,7 +212,9 @@
    "clean": [
     "X-12"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Workplace not closed at the end of the day",
+   "cue_en": "End of the shift (lights switched off, the cashier leaves) with the laptop left open and switched on (normally the laptop is closed and the equipment switched off)."
   },
   {
    "id": "T08",
@@ -230,7 +244,9 @@
    "clean": [
     "X-3"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Cash accepted without identifying the client",
+   "cue_en": "The client hands over cash and the cashier accepts it without first receiving and checking an identity document (normally the ID is handed over and checked first)."
   },
   {
    "id": "T09",
@@ -253,7 +269,9 @@
     "X-5",
     "X-39"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Previous client's cash left exposed while serving the next client",
+   "cue_en": "The previous client has left, their cash is still lying on the desk, and the next client comes in or is being served (normally the money is put away before the next client arrives)."
   },
   {
    "id": "T10",
@@ -273,7 +291,9 @@
    "clean": [
     "X-19"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Third person present while a client is served",
+   "cue_en": "During a transaction with a client, another visitor enters the service area and stands nearby (normally the next one comes in after the previous one has left)."
   },
   {
    "id": "T11",
@@ -294,7 +314,9 @@
     "X-35",
     "X-37"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Counting not finished in the client's presence",
+   "cue_en": "The client leaves while their cash is still being counted on the counting machine or has not been counted yet."
   },
   {
    "id": "T12",
@@ -319,7 +341,9 @@
    "clean": [
     "X-16"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Cash-collection bag accepted without checking the collector's documents",
+   "cue_en": "The cash collector hands over the bag and the cashier takes it at once; no document or ID is shown or checked (normally the cashier takes and examines the document first)."
   },
   {
    "id": "T13",
@@ -344,7 +368,9 @@
    "clean": [
     "X-14"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Cash from the bag put into the safe without counting",
+   "cue_en": "The contents of the cash-collection bag go into the safe without passing through the counting machine (normally every bundle is counted)."
   },
   {
    "id": "T14",
@@ -375,7 +401,9 @@
     "X-45",
     "X-43"
    ],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Banknotes not checked for authenticity",
+   "cue_en": "After the counting machine the cashier recounts the bundle by hand without checking the notes under the authenticity detector (normally note by note under the detector)."
   },
   {
    "id": "T15",
@@ -398,7 +426,9 @@
     "X-1@22"
    ],
    "clean": [],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Suspicious banknote returned to the client (probable)",
+   "cue_en": "The cashier takes notes out of the counting machine's reject pocket, looks at them and hands them back to the client instead of withdrawing them."
   },
   {
    "id": "T16",
@@ -416,7 +446,9 @@
     "X-40@17"
    ],
    "clean": [],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Personal belongings at the cashier's workplace",
+   "cue_en": "The cashier arrives in outerwear with a bag and puts the bag or clothing on the work desk with the counting machine."
   },
   {
    "id": "T17",
@@ -434,7 +466,9 @@
     "X-46@11"
    ],
    "clean": [],
-   "seen_in_train": true
+   "seen_in_train": true,
+   "name_en": "Eating or drinking at the workplace",
+   "cue_en": "The cashier eats or drinks at the work desk next to cash and equipment."
   },
   {
    "id": "T18",
@@ -450,7 +484,9 @@
    ],
    "examples": [],
    "clean": [],
-   "seen_in_train": false
+   "seen_in_train": false,
+   "name_en": "Cashier left the workplace while serving a client",
+   "cue_en": "The client sits at the desk, the transaction is not finished (cash or documents on the desk), and the cashier gets up and leaves the frame or goes to the door."
   },
   {
    "id": "T19",
@@ -466,7 +502,9 @@
    ],
    "examples": [],
    "clean": [],
-   "seen_in_train": false
+   "seen_in_train": false,
+   "name_en": "Phone with a camera in the cash room",
+   "cue_en": "The cashier uses a smartphone (holds it, takes photos, looks at the screen) at the work desk with cash."
   },
   {
    "id": "T20",
@@ -487,7 +525,9 @@
    ],
    "examples": [],
    "clean": [],
-   "seen_in_train": false
+   "seen_in_train": false,
+   "name_en": "Cash handed out without counting in front of the client",
+   "cue_en": "The cashier hands cash to the client without counting it in front of them (on the desk or the counting machine), and the client leaves right away."
   }
  ],
  "note": "T01-T17 come from the training clips. T18-T20 are candidates for unseen test types derived from Res. 231; fusion holds them to the stricter OPEN_WORLD_CONF threshold."

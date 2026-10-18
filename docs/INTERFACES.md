@@ -127,6 +127,7 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `VLM_MODE` | both | violations, events, both |
 | `VLM_EVENT_SAMPLES` | 1 | >1 = majority vote at temperature 0.7 |
 | `VLM_SCENE_FILTER` | true | show only the current scene's rules |
+| `VLM_PROMPT_LANG` | ru | language of the rule cards the VLM reads (`en` = `name_en`/`cue_en` in rules_kb); jury text stays Russian |
 | `EVENTS_MIN_CONF`, `VLM_MIN_CONF`, `OPEN_WORLD_CONF`, `VLM_ALONE_CONF` | 0.5, 0.6, 0.85, 0.8 | fusion floors |
 | `VETO_TYPES`, `VETO_BELOW` | visible types, 0.35 | VLM veto of event candidates |
 | `EVENTS_OWN` | (empty) | types where VLM-only candidates need `VLM_ALONE_CONF` |
