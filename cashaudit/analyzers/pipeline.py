@@ -121,7 +121,9 @@ class PipelineAnalyzer:
         meta = {"analyzer": self.name, "warnings": [], "stages": {}, "vlm_url": self.vlm.base_url}
         info = probe(video_path)
         # Budget-aware sampling: the queue may already have eaten part of the 5 minutes.
-        fps = settings.vlm_fps if deadline.remaining() > 150 else max(1.0, settings.vlm_fps / 2)
+        # Half fps only when the job starts this late. Load tests (5x X-14, WORKERS=1): half-fps jobs gave a false T12 in 4 of
+        # 10, full-fps jobs in 0 of 14, and a full-fps X-14 takes ~45 s, so 60 s left still finishes inside the budget.
+        fps = settings.vlm_fps if deadline.remaining() > float(os.getenv("VLM_HALF_FPS_BELOW", "150")) else max(1.0, settings.vlm_fps / 2)
         frames = sample_frames(video_path, fps=fps, max_side=settings.vlm_max_side)
         meta.update({"duration": info.duration, "fps_used": fps, "n_frames": len(frames)})
         meta["stages"]["decode"] = round(time.time() - t_start, 2)
