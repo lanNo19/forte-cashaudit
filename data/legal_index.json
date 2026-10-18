@@ -1,5 +1,5 @@
 {
- "about": "Point-level index of the legal sources. 'quote' = opening words of the point as published (checked on zakon.uchet.kz / prg.kz on 2026-10-17; R231 pp. 31.4, 42, 78, 101 from the zakon.uchet.kz edition updated 12.07.2026); 'summary' = our paraphrase. Only points in this file may be cited. Rebuild from full texts with tools/build_legal_index.py. Empty 'quote' = wording not verified verbatim; cite the point by its summary only.",
+ "about": "Point-level index of the legal sources. 'quote' = opening words of the point as published (checked on zakon.uchet.kz / prg.kz on 2026-10-17; R231 pp. 31.4, 42, 78, 101 from the zakon.uchet.kz edition updated 12.07.2026); 'summary' = our paraphrase. Only points in this file may be cited. Rebuild from full texts with tools/build_legal_index.py. Empty 'quote' = wording not verified verbatim; cite the point by its summary only. BANKS ст. 69: текст закона № 258-VIII сверен 2026-10-18 (kodeksy-kz.com, ст. 69 и ст. 135 о введении в действие; закон 1995 г. утратил силу).",
  "sources": {
   "R231": {
    "act": "Постановление Правления НБРК от 29.11.2019 № 231 (рег. МЮ № 19680)",
@@ -22,9 +22,9 @@
    "url": "https://adilet.zan.kz/rus/docs/Z090000191_"
   },
   "BANKS": {
-   "act": "Закон РК «О банках и банковской деятельности в Республике Казахстан»",
+   "act": "Закон РК от 16.01.2026 № 258-VIII «О банках и банковской деятельности в Республике Казахстан»",
    "title": "Банковская тайна",
-   "url": "https://adilet.zan.kz"
+   "url": "https://adilet.zan.kz/rus/docs/Z2600000258"
   }
  },
  "points": [
@@ -345,7 +345,7 @@
   },
   {
    "src": "BANKS",
-   "point": "положения о банковской тайне (номер статьи сверить с новой редакцией закона от 16.01.2026; в законе 1995 г. — ст. 50)",
+   "point": "ст. 69 «Банковская тайна»",
    "quote": "Банковская тайна включает в себя сведения о клиентах и корреспондентах банков",
    "summary": "Сведения о клиентах и их операциях составляют банковскую тайну.",
    "kw": "банковская тайна посторонний третье лицо присутствие конфиденциальность"
