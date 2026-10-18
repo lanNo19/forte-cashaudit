@@ -31,6 +31,9 @@ from .base import Deadline, Report
 WINDOW_SEC = float(os.getenv("VLM_WINDOW_SEC", "16"))
 STRIDE_SEC = float(os.getenv("VLM_STRIDE_SEC", "8"))
 VLM_MODE = os.getenv("VLM_MODE", "both")  # violations | events | both
+# Types the window scan may not name directly: their order is decided by rules.py on the event log merged over ALL
+# windows (a 16 s window often misses the ID/document handed over earlier, so the scan reports "cash before ID").
+SCAN_SKIP = set(filter(None, os.getenv("VLM_SCAN_SKIP", "").split(",")))
 EVENT_SAMPLES = int(os.getenv("VLM_EVENT_SAMPLES", "1"))  # 3-5 = majority vote (research: +AUC, more GPU time)
 
 
@@ -177,7 +180,7 @@ class PipelineAnalyzer:
                     return [], [], "skipped (deadline)"
                 vs, evs = [], []
                 if VLM_MODE in ("violations", "both"):
-                    vs = self.vlm.scan_window(window, ids)
+                    vs = [v for v in self.vlm.scan_window(window, ids) if v.type_id not in SCAN_SKIP]
                 if VLM_MODE in ("events", "both"):
                     evs = self.vlm.extract_events(window, samples=EVENT_SAMPLES, temperature=0.7)
                 return vs, evs, None

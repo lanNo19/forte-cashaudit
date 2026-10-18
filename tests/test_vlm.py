@@ -128,3 +128,31 @@ def test_time_text_parts_before_each_frame(monkeypatch):
     assert [p["type"] for p in parts] == ["text", "image_url"] * 3
     assert parts[0]["text"] == "<10.0 seconds>" and parts[4]["text"] == "<12.0 seconds>"
     assert "<t seconds>" in c._time_hint(fr)
+
+
+def test_scan_skip_types(monkeypatch):
+    import importlib
+    monkeypatch.setenv("VLM_SCAN_SKIP", "T08,T12")
+    mod = importlib.reload(pl)
+    try:
+        assert mod.SCAN_SKIP == {"T08", "T12"}
+    finally:
+        monkeypatch.delenv("VLM_SCAN_SKIP")
+        importlib.reload(pl)
+
+
+def test_check_style_keeps_only_items_marked_violation(monkeypatch):
+    monkeypatch.setenv("VLM_SCAN_STYLE", "check")
+    seen = {}
+
+    def handler(req):
+        seen["prompt"] = json.loads(req.content)["messages"][1]["content"][-1]["text"]
+        return reply(json.dumps({
+            "happens": "The cashier counts cash.",
+            "checks": {"T05": "violation", "T08": "ok", "T12": "unclear"},
+            "violations": [{"type_id": "T05", "t": 3.0, "observed": "Ключ в замке."},
+                           {"type_id": "T08", "t": 2.0, "observed": "listed but marked ok"}]}))
+
+    vs = fake_client(handler).scan_window(frames(), ["T05", "T08", "T12"])
+    assert [(v.type_id, v.timecode_sec, v.source) for v in vs] == [("T05", 3.0, "vlm")]
+    assert '"ok" = the procedure is followed' in seen["prompt"] and "for EVERY checklist id" in seen["prompt"]

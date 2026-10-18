@@ -208,8 +208,34 @@ class VLMClient:
         scene, conf = str(data.get("scene", "")).upper(), float(data.get("confidence", 0) or 0)
         return scene if scene in SCENES and conf >= 0.6 else None
 
+    def _check_window(self, frames: Frames, ids: Optional[Sequence[str]] = None) -> dict:
+        """VLM_SCAN_STYLE=check: verify a checklist instead of hunting for violations. The model first says what happens,
+        then marks EVERY item ok / violation / unclear, with "ok" the expected answer (research: paired normal/breach rules
+        and an abstain option cut false positives; a "list the violations" prompt makes a small VLM find some)."""
+        prompt = (
+            f"{self._time_hint(frames)}\n"
+            "You are checking a cashier's routine work against a checklist. Most of the time the work is normal.\n"
+            f"Checklist (id: what a breach would look like):\n{_rule_cards(ids)}\n\n"
+            "Step 1: in one sentence, say what actually happens in these frames.\n"
+            "Step 2: for EVERY checklist id give one status:\n"
+            '  "ok" = the procedure is followed, or the situation does not occur in these frames (the usual answer)\n'
+            '  "unclear" = the relevant moment or object is not visible or too small to judge\n'
+            '  "violation" = you can point to the frame where the breach clearly happens\n'
+            "Return JSON only, no prose:\n"
+            '{"happens": "<one sentence>", "checks": {"<id>": "ok|unclear|violation"}, '
+            '"violations": [{"type_id": "<id marked violation>", "t": <seconds, read from the frame>, '
+            '"observed": "<1-2 sentences in Russian: exactly what is visible>"}]}'
+        )
+        return _extract_json(self.chat(frames, prompt, max_tokens=900))
+
     def scan_window(self, frames: Frames, ids: Optional[Sequence[str]] = None) -> List[Violation]:
         """One window -> candidate violations (source='vlm')."""
+        if os.getenv("VLM_SCAN_STYLE", "list") == "check":
+            data = self._check_window(frames, ids)
+            checks = {str(k).upper(): str(v).lower() for k, v in (data.get("checks") or {}).items()} if isinstance(data.get("checks"), dict) else {}
+            items = [dict(it, confidence=0.8) for it in data.get("violations", []) or []
+                     if isinstance(it, dict) and checks.get(str(it.get("type_id", "")).upper()) == "violation"]
+            return self._to_violations(items, frames)
         prompt = (
             f"{self._time_hint(frames)}\n"
             f"Rules (id: name. visual cue):\n{_rule_cards(ids)}\n\n"
@@ -220,8 +246,11 @@ class VLMClient:
             "t = when the rule is first broken. confidence: 0.9+ only if it is unambiguous."
         )
         data = _extract_json(self.chat(frames, prompt))
+        return self._to_violations(data.get("violations", []) or [], frames)
+
+    def _to_violations(self, items, frames: Frames) -> List[Violation]:
         out = []
-        for item in data.get("violations", []) or []:
+        for item in items:
             try:
                 tid = str(item.get("type_id", "T00")).upper()
                 tid = tid if tid in kb.type_ids() or tid == "T00" else "T00"
