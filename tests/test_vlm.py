@@ -109,3 +109,23 @@ def test_scan_prompt_has_no_concrete_example_values():
     from cashaudit import vlm
     src = inspect.getsource(vlm.VLMClient.scan_window)
     assert '"T09"' not in src and '"t": 7' not in src
+
+
+def test_verify_negated_returns_p_yes_of_the_opposite_question():
+    import math
+    from cashaudit import kb
+    from cashaudit.schema import Violation
+    seen = {}
+
+    def handler(req):
+        body = json.loads(req.content)
+        seen["q"] = body["messages"][1]["content"][-1]["text"]
+        top = [{"token": "yes", "logprob": math.log(0.8)}, {"token": "no", "logprob": math.log(0.2)}]
+        return httpx.Response(200, json={"choices": [{"logprobs": {"content": [{"top_logprobs": top}]}}]})
+
+    c = fake_client(handler)
+    v = Violation(type_id="T08", type=kb.type_name("T08"), timecode_sec=12.0, description="x", evidence_ts=[12.0], confidence=0.98, source="vlm")
+    assert abs(c.verify_negated(frames(0, 12), v) - 0.8) < 1e-6
+    assert "identity document" in seen["q"] and "t=12s" in seen["q"]
+    v.type_id = "T02"
+    assert c.verify_negated(frames(0, 12), v) is None  # no opposite question for this type

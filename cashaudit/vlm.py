@@ -276,6 +276,37 @@ class VLMClient:
         conf = float(data.get("confidence", 0.5))
         return conf if data.get("holds") else min(conf, 1 - conf) * 0.5
 
+    NEGATED = {  # "was the thing done?" for order types: the violation is real only when the answer is no
+        "T08": "Before the client handed cash to the cashier (around t={t:.0f}s), did the client give the cashier or show an "
+               "ID card, passport or other identity document?",
+        "T12": "Before the cashier took the cash bag (around t={t:.0f}s), did the cash collector hand over or show a document, "
+               "paper list or ID card to the cashier?",
+        "T20": "Before handing the cash to the client (around t={t:.0f}s), did the cashier count the banknotes in front of the "
+               "client (by hand or on the counting machine)?",
+        "T11": "Before the client left (around t={t:.0f}s), had the counting of the client's cash already finished?",
+    }
+
+    def verify_negated(self, frames: Frames, v: Violation) -> Optional[float]:
+        """P(yes) of the opposite question on a wider window (frames from ~20 s before): high = the step was done, so
+        the order-type violation is not real. None when the type has no question or the request failed.
+        Measured with deploy/experiments/negate_test.py."""
+        q = self.NEGATED.get(v.type_id)
+        if not q or not frames:
+            return None
+        prompt = f"{self._time_hint(frames)}\n{q.format(t=v.timecode_sec)}\nAnswer with exactly one word: yes or no."
+        body = {"model": self.model, "temperature": 0.0, "max_tokens": 1, "logprobs": True, "top_logprobs": 10,
+                "messages": [{"role": "system", "content": SYSTEM},
+                             {"role": "user", "content": self._media(frames) + [{"type": "text", "text": prompt}]}]}
+        try:
+            r = self.http.post(f"{self.base_url}/chat/completions", json=body)
+            r.raise_for_status()
+            top = r.json()["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
+            yes = sum(math.exp(x["logprob"]) for x in top if x["token"].strip().lower() in ("yes", "да"))
+            no = sum(math.exp(x["logprob"]) for x in top if x["token"].strip().lower() in ("no", "нет"))
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
+            return None
+        return yes / (yes + no) if yes + no > 0 else None
+
     def _verify_logprob(self, frames: Frames, v: Violation, rule: str, when: float) -> Optional[float]:
         """VERIFY_MODE=logprob: one-word yes/no answer; returns P(yes) from the token probabilities instead of the
         model's self-reported confidence (unreliable on small VLMs: 0.9-0.98 for real and false candidates alike)."""

@@ -225,6 +225,22 @@ class PipelineAnalyzer:
             # a VLM-only violation must be a rule of the room the pipeline decided on (desk A / cash room B); T00 stays
             by_id = kb.load_kb()["by_id"]
             final = [v for v in final if v.source != "vlm" or by_id.get(v.type_id, {}).get("scene") in (None, scene)]
+        negate = set(filter(None, os.getenv("VERIFY_NEGATE_TYPES", "").split(",")))
+        if negate and vlm_ok:
+            # order types: ask the opposite question over the 20 s before ("was the ID shown?"); yes = not a violation
+            below = float(os.getenv("VERIFY_NEGATE_BELOW", "0.5"))
+            kept = []
+            for v in final:
+                if v.source == "vlm" and v.type_id in negate and deadline.remaining() > 15:
+                    w = [f for f in frames if v.timecode_sec - 20 <= f[0] <= v.timecode_sec + 2]
+                    if len(w) > 12:  # evenly spaced, first and last kept (as measured in negate_test.py)
+                        w = [w[round(i * (len(w) - 1) / 11)] for i in range(12)]
+                    p = self.vlm.verify_negated(w, v)
+                    meta.setdefault("negated", []).append([v.type_id, round(v.timecode_sec, 1), None if p is None else round(p, 3)])
+                    if p is not None and p >= below:
+                        continue
+                kept.append(v)
+            final = kept
         meta["stages"]["fusion"] = round(time.time() - t0, 2)
         meta["runtime_sec"] = round(time.time() - t_start, 2)
         meta["n_candidates"] = len(candidates)
