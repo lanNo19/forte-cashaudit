@@ -206,8 +206,15 @@ def assign_roles(tracks: List[Track], scene: Optional[str], t0: float, t1: float
     overruled = scene if (scene and guess and guess != scene) else None
     scene = guess or scene
     client_until = -1.0
+    staff = [cashier]
     for tr in sorted(tracks, key=lambda tr: tr.start):
         if tr is cashier:
+            continue
+        # Someone entering an empty room after the cashier left is the cashier coming back, not an outsider (own clips:
+        # cashier steps out and returns -> "other" -> false T02). Empty = nobody else is in the room at that moment.
+        if tr.start > max(s.end for s in staff) and not any(o is not tr and o.start < tr.start <= o.end for o in tracks):
+            tr.role = "cashier"
+            staff.append(tr)
             continue
         if scene == "A" and tr.start >= client_until:
             tr.role = "client"

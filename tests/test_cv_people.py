@@ -112,3 +112,20 @@ def test_behaviour_overrules_a_wrong_scene():  # A100: the VLM called the sessio
     assert scene == "A" and info["scene_overruled"] == "B"
     assert kinds(evs) == [(3.0, "person_enter", "client")]
     assert run_rules(EventLog(evs, 30.0, scene)) == []  # no T02
+
+
+def test_cashier_coming_back_to_an_empty_room_stays_cashier():  # own clips T16/T18: false T02 on the return
+    desk = (0.45, 0.47)
+    first = [desk] * 8 + walk(desk, DOOR, 4)  # 0-5.5 s at the desk, leaves through the door
+    back = walk(DOOR, desk, 4) + [desk] * 30  # comes back at 10 s, stays to the end
+    evs, _, info = people_events(clip(22, [(0, first), (10, back)]), CAM, "B")
+    assert [r for r, _, _ in info["roles"]] == ["cashier", "cashier"]
+    assert kinds(evs) == [(5.5, "person_exit", "cashier"), (10.0, "person_enter", "cashier")]
+    assert [v.type_id for v in run_rules(EventLog(evs, 22.0, "B"))] == []  # no T02
+
+
+def test_outsider_while_the_cashier_is_in_is_still_other():  # X-30 unchanged
+    cashier = walk(DOOR, (0.45, 0.47), 4) + [(0.45, 0.47)] * 40
+    outsider = walk(DOOR, (0.2, 0.47), 4) + [(0.2, 0.47)] * 14
+    evs, _, info = people_events(clip(20, [(1, cashier), (12, outsider)]), CAM, "B")
+    assert [r for r, _, _ in info["roles"]] == ["cashier", "other"]
