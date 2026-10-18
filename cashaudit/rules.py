@@ -71,6 +71,11 @@ def t01_door_not_closed(log: EventLog) -> List[Violation]:
     for e in log.of("person_enter", actor="cashier"):
         closed = [c for c in log.of("door_close") if e.t < c.t <= e.t + DOOR_GRACE_SEC]
         late = e.t + DOOR_GRACE_SEC
+        # CV door states carry the time of their last "open" answer: the door must be seen open after this entry, not
+        # only before it (A100 X-31: "open" at 0-4 s, then unknown; the cashier entered at 7 s). Other sources: as before.
+        cv_open = [d for d in log.of("door_open") if "last_yes" in d.extra]
+        if cv_open and not any(d.t <= late + DOOR_SAMPLE_SEC and d.extra["last_yes"] >= e.t for d in cv_open):
+            continue
         if not closed and any(a < late + DOOR_SAMPLE_SEC and b > late for a, b in door_open):
             out.append(_v("T01", e.t, "Кассир вошла в кассовое помещение и прошла к рабочему месту, дверь за собой не закрыла",
                           [e.t, e.t + DOOR_GRACE_SEC / 2, e.t + DOOR_GRACE_SEC], 0.7 * e.conf))

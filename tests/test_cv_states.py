@@ -31,7 +31,7 @@ def test_state_change_is_timed_at_its_first_sample_and_needs_two():
 
 def test_single_wrong_answer_and_unknowns_do_not_flip_the_state():
     evs = states.answers_to_events(series("yyynyy??yy"), "screen_on", "screen_locked", obj="laptop")
-    assert kinds(evs) == [(0.0, "screen_on")]
+    assert kinds([e for e in evs if not e.extra.get("reconfirm")]) == [(0.0, "screen_on")]
 
 
 def test_opening_off_state_is_not_reported():
@@ -117,3 +117,15 @@ def test_one_unknown_at_real_frame_times_does_not_break_a_run():  # A100 X-25: s
     ser = [(i * 1.001, v) for i, v in enumerate([False] * 8 + [True] * 4 + [False, None, False] + [True] * 4 + [False] * 3)]
     assert kinds(states.answers_to_events(ser, "safe_open", "safe_close")) == [(8 * 1.001, "safe_open"), (12 * 1.001, "safe_close"),
                                                                             (15 * 1.001, "safe_open"), (19 * 1.001, "safe_close")]
+
+
+def test_door_must_be_seen_open_after_the_entry():  # A100 X-31 (combo4) vs X-33
+    from cashaudit.events import Event, EventLog
+    from cashaudit.rules import run_rules
+
+    def t01(ans, entry):
+        evs = states.answers_to_events([(i * 1.001, v) for i, v in series(ans)], "door_open", "door_close", zone="door")
+        return [v.timecode_sec for v in run_rules(EventLog(evs + [Event(entry, "person_enter", actor="cashier")], 24, "B"))
+                if v.type_id == "T01"]
+    assert t01("y?y?y???????????????????", 7.0) == []  # open only before the entry, then unknown: no T01
+    assert t01("y?y??y??????yyy", 5.5) == [5.5]  # re-confirmed open at 12-14 s after the entry at 5.5 s

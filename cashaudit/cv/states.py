@@ -167,15 +167,19 @@ def ask_all(frames, boxes: Dict[str, Box], ask: Callable[[Dict[str, np.ndarray]]
 def answers_to_events(series: Sequence[Tuple[float, Optional[bool]]], on_kind: str, off_kind: str, hold: int = STATE_HOLD,
                       **fields) -> List[Event]:
     """Smoothed state changes, timed at the first sample of the new state. Unknown answers neither confirm nor break a
-    run. A state that is already on at the start is reported (T04/T06 need it); an opening "off" is not."""
+    run. A state that is already on at the start is reported (T04/T06 need it); an opening "off" is not.
+    An "on" event keeps `extra.last_yes` = its last confirming answer; after a long stretch of unknowns a re-confirmed
+    "on" is reported again (`extra.reconfirm`), so rules can tell "seen on after X" from "seen on once, long before"."""
     out: List[Event] = []
     state: Optional[bool] = None
     run_val: Optional[bool] = None
     run_t, run_n, last_t = 0.0, 0, None
+    on_ev: Optional[Event] = None
     for t, v in series:
         if v is None:
             continue
-        if last_t is not None and t - last_t > STATE_GAP_SEC:
+        reset = last_t is not None and t - last_t > STATE_GAP_SEC
+        if reset:
             run_val, run_n = None, 0  # a long stretch of unknowns: start counting again
         last_t = t
         if v == run_val:
@@ -183,9 +187,21 @@ def answers_to_events(series: Sequence[Tuple[float, Optional[bool]]], on_kind: s
         else:
             run_val, run_t, run_n = v, t, 1
         if run_n >= hold and run_val != state:
+            on_ev = None
             if run_val or state is not None:
-                out.append(Event(run_t, on_kind if run_val else off_kind, conf=0.8, extra={"source": "cv_vlm"}, **fields))
+                ev = Event(run_t, on_kind if run_val else off_kind, conf=0.8, extra={"source": "cv_vlm"}, **fields)
+                if run_val:
+                    ev.extra["last_yes"] = t
+                    on_ev = ev
+                out.append(ev)
             state = run_val
+        elif run_val and state and run_n >= hold and on_ev is None:
+            on_ev = Event(run_t, on_kind, conf=0.8, extra={"source": "cv_vlm", "last_yes": t, "reconfirm": True}, **fields)
+            out.append(on_ev)
+        elif v and state and on_ev is not None and not reset:
+            on_ev.extra["last_yes"] = t
+        if reset and state:
+            on_ev = None  # the next confirmed run is a re-confirmation
     return out
 
 
