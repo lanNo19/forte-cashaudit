@@ -53,7 +53,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Cash-room door left open after entering",
-   "cue_en": "The cashier enters the cash room and walks to the workplace without closing or locking the door behind them (normally they turn around and close the door)."
+   "cue_en": "The cashier walks in through the room door and goes to the desk, and the door behind them stays open (a gap or the corridor visible) for several seconds. Normal: the cashier turns back and shuts the door right after entering."
   },
   {
    "id": "T02",
@@ -80,7 +80,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Unauthorized person in the cash room",
-   "cue_en": "A person who is not the cashier enters the room with the cash and the safe while work is going on."
+   "cue_en": "A second person who is not the cashier comes in through the door and is inside the cash room while cash or the safe is there. Normal: only the cashier is in the room."
   },
   {
    "id": "T03",
@@ -111,7 +111,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Cash or valuables left unattended when leaving the workplace",
-   "cue_en": "The cashier leaves the room with cash, a cash-collection bag or valuables/documents left on the desk instead of putting them into the safe."
+   "cue_en": "The cashier walks out of the room while banknotes, a cash bag or documents are still lying on the desk. Normal: everything goes into the safe and the desk is empty before leaving."
   },
   {
    "id": "T04",
@@ -138,7 +138,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Safe left open",
-   "cue_en": "The cashier opens the safe, takes valuables out and walks away or works at the desk without closing the safe door."
+   "cue_en": "The safe door stands open while the cashier is back at the desk or walking away from the safe. Normal: the cashier closes the safe door right after taking something out."
   },
   {
    "id": "T05",
@@ -165,7 +165,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Key left in the safe lock",
-   "cue_en": "The cashier closes the safe and leaves with the key still in the keyhole (normally the key is taken away)."
+   "cue_en": "After the cashier closes the safe and walks away, a key is still sticking out of the safe's lock. Normal: the cashier pulls the key out and takes it."
   },
   {
    "id": "T06",
@@ -187,7 +187,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Workstation not locked when leaving",
-   "cue_en": "The cashier gets up and leaves while the laptop screen stays active with data visible (normally the screen is locked or turned off first)."
+   "cue_en": "The cashier gets up and walks away from the desk while the laptop screen is still bright, showing a window or data. Normal: the screen goes dark or shows a lock screen before the cashier leaves."
   },
   {
    "id": "T07",
@@ -214,7 +214,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Workplace not closed at the end of the day",
-   "cue_en": "End of the shift (lights switched off, the cashier leaves) with the laptop left open and switched on (normally the laptop is closed and the equipment switched off)."
+   "cue_en": "The room lights go off at the end of the shift and the cashier leaves while the laptop stays open with a lit screen. Normal: the laptop lid is closed before the lights go off."
   },
   {
    "id": "T08",
@@ -246,7 +246,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Cash accepted without identifying the client",
-   "cue_en": "The client hands over cash and the cashier accepts it without first receiving and checking an identity document (normally the ID is handed over and checked first)."
+   "cue_en": "A client across the desk hands banknotes to the cashier and the cashier takes them, with no ID card or passport passed from the client to the cashier before that in the same visit. Normal: an ID card goes to the cashier first, then the cash."
   },
   {
    "id": "T09",
@@ -271,7 +271,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Previous client's cash left exposed while serving the next client",
-   "cue_en": "The previous client has left, their cash is still lying on the desk, and the next client comes in or is being served (normally the money is put away before the next client arrives)."
+   "cue_en": "A client leaves while their banknotes are still lying on the desk, and the next client comes in or sits down while those banknotes are still there. Normal: the cash is put away before the next client arrives."
   },
   {
    "id": "T10",
@@ -293,7 +293,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Third person present while a client is served",
-   "cue_en": "During a transaction with a client, another visitor enters the service area and stands nearby (normally the next one comes in after the previous one has left)."
+   "cue_en": "While the cashier is serving a seated client, another visitor walks up and stands next to the desk. Normal: the next visitor comes in only after the previous client has left."
   },
   {
    "id": "T11",
@@ -316,7 +316,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Counting not finished in the client's presence",
-   "cue_en": "The client leaves while their cash is still being counted on the counting machine or has not been counted yet."
+   "cue_en": "The client stands up and leaves while their banknotes are still in the counting machine or not counted yet. Normal: the client stays until the count is finished."
   },
   {
    "id": "T12",
@@ -343,7 +343,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Cash-collection bag accepted without checking the collector's documents",
-   "cue_en": "The cash collector hands over the bag and the cashier takes it at once; no document or ID is shown or checked (normally the cashier takes and examines the document first)."
+   "cue_en": "A cash collector hands a bag to the cashier and the cashier takes it at once, with no paper or ID card handed over and looked at first. Normal: the cashier takes and reads the collector's document first, then the bag."
   },
   {
    "id": "T13",
@@ -370,7 +370,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Cash from the bag put into the safe without counting",
-   "cue_en": "The contents of the cash-collection bag go into the safe without passing through the counting machine (normally every bundle is counted)."
+   "cue_en": "Banknotes taken out of a cash collection bag go straight into the safe without being put through the counting machine. Normal: every bundle is run through the counting machine first."
   },
   {
    "id": "T14",
@@ -403,7 +403,7 @@
    ],
    "seen_in_train": true,
    "name_en": "Banknotes not checked for authenticity",
-   "cue_en": "After the counting machine the cashier recounts the bundle by hand without checking the notes under the authenticity detector (normally note by note under the detector)."
+   "cue_en": "Right after the counting machine, the cashier recounts the bundle by hand without passing the notes under the banknote detector (a small device with a light). Normal: notes are checked one by one under the detector."
   },
   {
    "id": "T15",
@@ -428,7 +428,7 @@
    "clean": [],
    "seen_in_train": true,
    "name_en": "Suspicious banknote returned to the client (probable)",
-   "cue_en": "The cashier takes notes out of the counting machine's reject pocket, looks at them and hands them back to the client instead of withdrawing them."
+   "cue_en": "The cashier takes notes out of the counting machine's reject pocket, looks at them and hands them back to the client. Normal: rejected notes stay with the cashier and are recorded."
   },
   {
    "id": "T16",
@@ -448,7 +448,7 @@
    "clean": [],
    "seen_in_train": true,
    "name_en": "Personal belongings at the cashier's workplace",
-   "cue_en": "The cashier arrives in outerwear with a bag and puts the bag or clothing on the work desk with the counting machine."
+   "cue_en": "The cashier comes in wearing a coat and puts a handbag or the coat on the work desk next to the counting machine. Normal: personal things are kept away from the work desk."
   },
   {
    "id": "T17",
@@ -468,7 +468,7 @@
    "clean": [],
    "seen_in_train": true,
    "name_en": "Eating or drinking at the workplace",
-   "cue_en": "The cashier eats or drinks at the work desk next to cash and equipment."
+   "cue_en": "The cashier eats or drinks at the work desk (food, a cup or a bottle at the mouth) next to cash or equipment. Normal: no food or drink at the desk."
   },
   {
    "id": "T18",
@@ -486,7 +486,7 @@
    "clean": [],
    "seen_in_train": false,
    "name_en": "Cashier left the workplace while serving a client",
-   "cue_en": "The client sits at the desk, the transaction is not finished (cash or documents on the desk), and the cashier gets up and leaves the frame or goes to the door."
+   "cue_en": "A client is still seated at the desk with the transaction unfinished (cash or papers on the desk), and the cashier stands up and leaves the frame or walks to the door. Normal: the cashier stays until the client has left."
   },
   {
    "id": "T19",
@@ -504,7 +504,7 @@
    "clean": [],
    "seen_in_train": false,
    "name_en": "Phone with a camera in the cash room",
-   "cue_en": "The cashier uses a smartphone (holds it, takes photos, looks at the screen) at the work desk with cash."
+   "cue_en": "The cashier holds a smartphone at the desk with cash: looking at its screen, typing or pointing it like a camera. Normal: no phone in the cashier's hands."
   },
   {
    "id": "T20",
@@ -527,7 +527,7 @@
    "clean": [],
    "seen_in_train": false,
    "name_en": "Cash handed out without counting in front of the client",
-   "cue_en": "The cashier hands cash to the client without counting it in front of them (on the desk or the counting machine), and the client leaves right away."
+   "cue_en": "The cashier hands banknotes to the client without counting them in front of the client (no counting machine run, no hand count), and the client leaves at once. Normal: the cash is counted in front of the client first."
   }
  ],
  "note": "T01-T17 come from the training clips. T18-T20 are candidates for unseen test types derived from Res. 231; fusion holds them to the stricter OPEN_WORLD_CONF threshold."

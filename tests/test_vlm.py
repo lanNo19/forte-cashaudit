@@ -116,4 +116,4 @@ def test_english_rule_cards_switch(monkeypatch):
     assert "Visual cue: Кассир" in vlm._rule_cards(["T05"])
     monkeypatch.setenv("VLM_PROMPT_LANG", "en")
     cards = vlm._rule_cards(["T05"])
-    assert "T05: Key left in the safe lock. Visual cue: The cashier closes the safe" in cards
+    assert "T05: Key left in the safe lock. Visual cue: After the cashier closes the safe" in cards
