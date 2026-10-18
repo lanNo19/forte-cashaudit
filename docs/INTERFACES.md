@@ -120,9 +120,9 @@ window-relative times). Only rule ids for the current scene are shown when `VLM_
 | `API_EXTRA_FIELDS` | false | add type_id, confidence, refs to the jury JSON (keep false for the jury) |
 | `VLM_BASE_URL` | http://127.0.0.1:8001/v1 | comma-separated, one per GPU |
 | `VLM_MODEL` | Qwen/Qwen3-VL-4B-Instruct | served model name (8B: same family, compare with `deploy/vm.sh eval`) |
-| `VLM_FPS`, `VLM_MAX_SIDE`, `VLM_MAX_FRAMES` | 2, 0 (native), 32 | what the VLM sees per 16 s window |
+| `VLM_FPS`, `VLM_MAX_SIDE`, `VLM_MAX_FRAMES` | 2, 848, 32 | what the VLM sees per 16 s window; frames with a longer side are scaled down (0 = native: 1080p overflows the 16k context) |
 | `VLM_WINDOW_SEC`, `VLM_STRIDE_SEC` | 16, 8 | sliding windows |
-| `VLM_CONCURRENCY` | 4 | windows in flight per video |
+| `VLM_CONCURRENCY` | 8 | windows in flight per video |
 | `VLM_INPUT` | images | images or video (experimental, native timestamps) |
 | `VLM_MODE` | both | violations, events, both |
 | `VLM_EVENT_SAMPLES` | 1 | >1 = majority vote at temperature 0.7 |

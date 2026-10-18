@@ -42,9 +42,9 @@ class Settings:
         self.vlm_timeout_sec = float(os.getenv("VLM_TIMEOUT_SEC", "60"))
         # What the VLM sees (research: 2-4 fps at native resolution; the old default was ~1 fps at 640 px)
         self.vlm_fps = float(os.getenv("VLM_FPS", "2"))
-        self.vlm_max_side = int(os.getenv("VLM_MAX_SIDE", "0"))  # 0 = native resolution
+        self.vlm_max_side = int(os.getenv("VLM_MAX_SIDE", "848"))  # long side cap (0 = native): 32 native 1080p frames overflow the 16k context
         self.vlm_max_frames = int(os.getenv("VLM_MAX_FRAMES", "32"))  # per 16 s window
-        self.vlm_concurrency = int(os.getenv("VLM_CONCURRENCY", "4"))  # windows in flight per video
+        self.vlm_concurrency = int(os.getenv("VLM_CONCURRENCY", "8"))  # windows in flight per video
         # images = JPEG list with a small burned-in time label; video = one mp4 per window (native timestamps, experimental)
         self.vlm_input = os.getenv("VLM_INPUT", "images")
         self.vlm_scene_filter = _bool("VLM_SCENE_FILTER", True)
