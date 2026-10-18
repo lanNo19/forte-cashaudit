@@ -2,7 +2,11 @@
 
 Local service that checks overhead CCTV video of a bank cashier's workplace for cash-discipline violations and returns
 the verdict, type, timecode, evidence frames and the Kazakh legal basis (ForteBank Datathon 26). No cloud AI: the VLM
-runs in our own vLLM. **Private repo:** the organisers' data may be used only within the hackathon.
+runs in our own vLLM. The organisers' videos are not in the repository and are never committed.
+
+**For the jury:** web interface https://34-171-142-215.sslip.io/, API as in section 10 of the brief
+(`POST /api/v1/analyze` with the field `file` and the header `X-API-Key`, `GET /api/v1/jobs/{job_id}`; the same calls work
+without the `/api/v1` prefix), health check `GET /healthz`. Documentation in Russian is attached to the submission as a PDF.
 
 **Agents and new teammates: start with [AGENTS.md](AGENTS.md)**, then [docs/STATUS.md](docs/STATUS.md) and
 [docs/INTERFACES.md](docs/INTERFACES.md). Decisions: [docs/DECISIONS.md](docs/DECISIONS.md). Research behind the
@@ -12,7 +16,7 @@ architecture: [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ```bash
 make install
-make check                 # licence/cloud scan + 34 tests, ~10 s
+make check                 # licence/cloud scan + tests, ~10 s
 make serve-stub            # UI at http://127.0.0.1:8000, API key "dev"
 curl -H "X-API-Key: dev" -F "file=@video.mov" http://127.0.0.1:8000/api/v1/analyze
 curl -H "X-API-Key: dev" http://127.0.0.1:8000/api/v1/jobs/<job_id>
