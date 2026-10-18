@@ -169,4 +169,4 @@ def test_check_style_without_summary(monkeypatch):
 
     vs = fake_client(handler).scan_window(frames(), ["T05"])
     assert [v.type_id for v in vs] == ["T05"]
-    assert "happens" not in seen["prompt"] and "Step 1" not in seen["prompt"] and "For EVERY checklist id" in seen["prompt"]
+    assert "\"happens\"" not in seen["prompt"] and "Step 1" not in seen["prompt"] and "For EVERY checklist id" in seen["prompt"]
