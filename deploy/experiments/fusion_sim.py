@@ -16,6 +16,8 @@ Policies (all leave CV "events" and "fused" violations alone):
     win2A        win2 only for the scene-A order types T08 T09 T11 T12 T20
     scene        VLM violation's type must belong to the scene the pipeline used (meta.scene)
     win2+scene   both
+    win2@new     win2, but only when the CV layer could not register the camera to the training room (meta.cv.roi
+    win2A@new    .registered is false): a new camera/room. Training clips and their shifted copies all register.
 """
 import csv
 import json
@@ -41,9 +43,17 @@ def support(v, cands):
     return sum(1 for c in cands if c.get("type_id") == tid(v) and abs((c.get("timecode_sec") or 0) - v["timecode_sec"]) <= WIN)
 
 
+def unregistered(meta):
+    return ((meta.get("cv") or {}).get("roi") or {}).get("registered") is False
+
+
 def keep(policy, v, cands, meta):
     if v.get("source") in ("events", "fused"):
         return True
+    if policy.endswith("@new"):
+        if not unregistered(meta):
+            return True
+        policy = policy[:-4]
     p = v.get("confidence") or 0
     if policy == "base":
         return True
@@ -62,7 +72,7 @@ def keep(policy, v, cands, meta):
     raise ValueError(policy)
 
 
-POLICIES = ["base", "p80", "p90", "p95", "win2", "win2A", "scene", "win2+scene"]
+POLICIES = ["base", "p80", "p90", "p95", "win2", "win2A", "scene", "win2+scene", "win2@new", "win2A@new"]
 
 
 def score(run, labels, policy):
@@ -106,7 +116,9 @@ def main():
     for run, labels in pairs:
         if not Path(run).is_dir() or not Path(labels).exists():
             print(f"-- {run}: missing (run dir or {labels})"); continue
-        print(f"-- {run}   (acc · missed · false alarms · type · median |dt|; flips vs base: + fixed, - broken)")
+        metas = [(json.loads(f.read_text(encoding="utf-8")).get("meta") or {}) for f in Path(run).glob("*.json") if not f.name.startswith("_") and f.name != "scoreboard.json"]
+        print(f"-- {run}   camera not registered on {sum(unregistered(m) for m in metas)}/{len(metas)} clips")
+        print("   (acc · missed · false alarms · type · median |dt|; flips vs base: + fixed, - broken)")
         for pol in POLICIES:
             s = score(run, labels, pol)
             if s is None:
