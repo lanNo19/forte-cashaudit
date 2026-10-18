@@ -67,12 +67,20 @@ SCENES = {
 Frames = List[Tuple[float, np.ndarray]]
 
 
+def _card(t: dict) -> str:
+    """Rule name + visual cue the VLM reads. VLM_PROMPT_LANG=en uses the English cards (name_en/cue_en in rules_kb);
+    jury-facing text (type names, descriptions, legal basis) stays Russian either way."""
+    if os.getenv("VLM_PROMPT_LANG", "ru") == "en" and t.get("cue_en"):
+        return f"{t['name_en']}. Visual cue: {t['cue_en']}"
+    return f"{t['name']}. Visual cue: {t['cue']}"
+
+
 def _rule_cards(ids: Optional[Sequence[str]] = None) -> str:
     lines = []
     for t in kb.load_kb()["types"]:
         if ids and t["id"] not in ids:
             continue
-        lines.append(f"{t['id']}: {t['name']}. Visual cue: {t['cue']}")
+        lines.append(f"{t['id']}: {_card(t)}")
     lines.append("T00: any other clearly visible breach of cash-handling or cash-room security procedures (use sparingly).")
     return "\n".join(lines)
 
@@ -259,7 +267,7 @@ class VLMClient:
     def verify(self, frames: Frames, v: Violation) -> Optional[float]:
         """Yes/no check of one candidate on the frames around it. Returns a confidence or None on failure."""
         t = kb.load_kb()["by_id"].get(v.type_id)
-        rule = f"{t['name']}. Visual cue: {t['cue']}" if t else v.type
+        rule = _card(t) if t else v.type
         when = v.timecode_sec - frames[0][0] if self.input_mode == "video" else v.timecode_sec
         if os.getenv("VERIFY_MODE", "logprob") == "logprob":
             return self._verify_logprob(frames, v, rule, when)

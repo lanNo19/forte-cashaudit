@@ -109,3 +109,11 @@ def test_scan_prompt_has_no_concrete_example_values():
     from cashaudit import vlm
     src = inspect.getsource(vlm.VLMClient.scan_window)
     assert '"T09"' not in src and '"t": 7' not in src
+
+
+def test_english_rule_cards_switch(monkeypatch):
+    from cashaudit import vlm
+    assert "Visual cue: Кассир" in vlm._rule_cards(["T05"])
+    monkeypatch.setenv("VLM_PROMPT_LANG", "en")
+    cards = vlm._rule_cards(["T05"])
+    assert "T05: Key left in the safe lock. Visual cue: After the cashier closes the safe" in cards
