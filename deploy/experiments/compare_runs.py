@@ -2,9 +2,9 @@
 """Per-clip side by side of saved runs (local or API), standard library only: runs on the VM host.
 
     python3 deploy/experiments/compare_runs.py data/train_annotations.csv var/runs/soak5 var/runs/en1/both var/runs/tt1
-    NOSCAN_A=1 python3 ...   also drop VLM-only violations of the ordering types (T08 T09 T11 T12 T20), as the
-                             EVENTS_OWN=T08,T09,T11,T12,T20 + VLM_ALONE_CONF=1.01 config would (local runs only:
-                             API runs carry no source and are shown as they are)
+    NOSCAN_A=1 python3 ...   also drop every "vlm" violation of the ordering types (T08 T09 T11 T12 T20): those
+                             types switched off (rule findings on VLM events are labelled "vlm" too). Local runs
+                             only: API runs carry no source and are shown as they are
 
 Only clips present in the LAST run are listed. A cell is "ok"/"XX" (verdict right/wrong) then the types@seconds.
 """

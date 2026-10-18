@@ -18,8 +18,9 @@ Policies (all leave CV "events" and "fused" violations alone):
     win2+scene   both
     win2@new     win2, but only when the CV layer could not register the camera to the training room (meta.cv.roi
     win2A@new    .registered is false): a new camera/room. Training clips and their shifted copies all register.
-    noscanA      ordering types (T08 T09 T11 T12 T20) only from the event log: a VLM-only violation of these types
-                 is dropped (the order is computed by the rules from VLM/CV events, not judged by the model)
+    noscanA      ordering types (T08 T09 T11 T12 T20) switched OFF: every VLM violation of these types is dropped,
+                 including the ones rules.py found on VLM events (pipeline.py labels those "vlm" too). The run-time
+                 "order from the event log only" switch is VLM_SCAN_SKIP (needs a new run, not simulable here)
 """
 import csv
 import json
